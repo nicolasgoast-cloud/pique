@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pique: calendario de pesca</title>
+<meta name="theme-color" content="#0F2E3A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pique">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --hondo:#0F2E3A;      /* agua profunda, tinta */
+  --hondo-2:#3D5963;
+  --carta:#E3EBE9;      /* fondo, tono carta náutica */
+  --papel:#F6F9F8;
+  --agua:#2B6E8C;
+  --agua-claro:#9DBFCB;
+  --boya:#EDB01A;
+  --alerta:#B3361F;
+  --linea:#C3D2D0;
+  --display:'Big Shoulders Display', 'Arial Narrow', sans-serif;
+  --texto:'Instrument Sans', system-ui, sans-serif;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--carta);color:var(--hondo);font:16px/1.5 var(--texto);font-variant-numeric:tabular-nums;
+  padding-top:var(--safe-t);padding-bottom:calc(72px + var(--safe-b))}
+button,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--boya);outline-offset:2px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 18px}
+
+/* Barra superior */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0 10px}
+.marca{font:800 34px/1 var(--display);letter-spacing:.5px;margin:0;display:flex;align-items:center;gap:8px}
+.marca svg{width:26px;height:26px}
+.lugar{position:relative}
+.lugar select{appearance:none;-webkit-appearance:none;background:var(--papel);border:1.5px solid var(--hondo);border-radius:999px;
+  padding:8px 34px 8px 14px;font-weight:600;font-size:15px;cursor:pointer}
+.lugar::after{content:"";position:absolute;right:14px;top:50%;width:7px;height:7px;border-right:2px solid var(--hondo);border-bottom:2px solid var(--hondo);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+.modos{display:grid;grid-template-columns:repeat(3,1fr);background:var(--papel);border:1.5px solid var(--hondo);border-radius:12px;overflow:hidden;margin-bottom:14px}
+.modos button{border:0;background:none;padding:9px 4px;font-weight:600;cursor:pointer}
+.modos button+button{border-left:1.5px solid var(--hondo)}
+.modos button[aria-pressed="true"]{background:var(--hondo);color:var(--papel)}
+.estado{font-size:13px;color:var(--hondo-2);margin:0 0 14px;min-height:20px}
+.estado.aviso{color:var(--alerta)}
+
+/* Hoy: regla de marea */
+.hoy{display:grid;grid-template-columns:74px 1fr;gap:18px;background:var(--hondo);color:var(--papel);border-radius:20px;padding:20px 20px 20px 16px;margin-bottom:22px;position:relative;overflow:hidden}
+.regla{width:74px;height:100%;min-height:230px}
+.hoy-fecha{margin:0;font-size:14px;color:var(--agua-claro);padding-right:56px}
+.hoy-veredicto{font:800 64px/.9 var(--display);margin:4px 0 2px;letter-spacing:.5px}
+.hoy-puntos{margin:0 0 12px;font-size:14px;color:var(--agua-claro)}
+.hoy-horas{margin:0 0 14px;font-size:17px;line-height:1.35}
+.hoy-horas strong{color:var(--boya);font-weight:600}
+.datos{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px 14px;margin:0}
+.datos div{border-top:1px solid rgba(246,249,248,.18);padding-top:6px}
+.datos dt{font-size:12px;color:var(--agua-claro)}
+.datos dd{margin:0;font-weight:600;font-size:15px}
+.hoy .luna-grande{position:absolute;right:18px;top:18px;width:46px;height:46px}
+.peligro{background:var(--alerta);color:#fff;border-radius:10px;padding:8px 12px;font-size:14px;font-weight:600;margin:0 0 12px}
+
+/* Calendario */
+.columnas{display:grid;gap:22px;grid-template-columns:minmax(0,1fr)}
+.columnas>*{min-width:0}
+@media (min-width:900px){.columnas{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}}
+.mes-cab{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.mes-cab h2{font:800 30px/1 var(--display);margin:0}
+.flecha{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--hondo);background:var(--papel);cursor:pointer;display:grid;place-items:center}
+.flecha svg{width:16px;height:16px}
+.semana,.grilla{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.semana span{font-size:12px;text-align:center;color:var(--hondo-2);padding:2px 0}
+.dia{position:relative;aspect-ratio:1/1.12;border:1px solid var(--linea);background:var(--papel);border-radius:8px;overflow:hidden;cursor:pointer;padding:0;text-align:left}
+.dia.fuera{visibility:hidden}
+.dia .num{position:absolute;left:5px;top:3px;font:600 18px/1 var(--display);z-index:2}
+.dia .lunita{position:absolute;right:3px;top:4px;width:11px;height:11px;z-index:2}
+.dia .nivel{position:absolute;left:0;right:0;bottom:0;background:var(--agua);transition:height .5s ease}
+.dia .nivel.medio{background:#5E93AA}
+.dia .nivel.bajo{background:var(--agua-claro)}
+.dia .nivel.estimado{background:repeating-linear-gradient(135deg,var(--agua-claro) 0 3px,transparent 3px 7px)}
+.dia .nivel::before{content:"";position:absolute;left:0;right:0;top:-1px;height:2px;background:rgba(255,255,255,.55)}
+.dia .boya{position:absolute;left:50%;bottom:6px;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;background:var(--boya);box-shadow:0 0 0 2px var(--papel);z-index:2}
+.dia .riesgo{position:absolute;right:5px;bottom:4px;font:800 15px/1 var(--display);color:#fff;background:var(--alerta);width:16px;height:16px;border-radius:4px;text-align:center;z-index:2}
+.dia.hoy-cel{border:2px solid var(--hondo)}
+.dia[aria-selected="true"]{outline:3px solid var(--boya);outline-offset:-3px}
+.dia.alto .num{color:var(--papel)}
+.leyenda{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--hondo-2);margin:10px 0 0}
+.leyenda i{display:inline-block;width:14px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:5px}
+
+/* Detalle */
+.detalle{background:var(--papel);border-radius:20px;padding:18px;border:1px solid var(--linea)}
+.det-cab{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.det-cab h3{font:800 28px/1.05 var(--display);margin:0}
+.det-cab .veredicto{font:800 22px/1 var(--display)}
+.nota{font-size:13px;color:var(--hondo-2);margin:6px 0 0}
+.bloque{margin-top:18px}
+.bloque h4{font:600 15px/1.2 var(--texto);margin:0 0 8px}
+.marea svg{width:100%;height:auto;display:block}
+.horas{display:flex;gap:3px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x proximity}
+.hora{flex:0 0 46px;text-align:center;font-size:12px;border-radius:8px;padding:6px 0;scroll-snap-align:start}
+.hora.mejor{background:#FBEFC8}
+.hora b{display:block;font:600 15px/1 var(--display)}
+.hora .barra{height:46px;display:flex;align-items:flex-end;justify-content:center;margin:6px 0}
+.hora .barra i{width:16px;border-radius:3px 3px 0 0;background:var(--agua)}
+.hora .viento{display:flex;align-items:center;justify-content:center;gap:2px}
+.hora .viento svg{width:11px;height:11px}
+.hora .ola{color:var(--hondo-2)}
+.filas{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:15px}
+.filas dt{color:var(--hondo-2)}
+.filas dd{margin:0}
+.especies-dia{list-style:none;margin:0;padding:0}
+.especies-dia li{padding:9px 0;border-top:1px solid var(--linea)}
+.especies-dia b{font-weight:600}
+.especies-dia span{display:block;font-size:14px;color:var(--hondo-2)}
+
+/* Especies */
+.vista{display:none}
+.vista.activa{display:block}
+.esp-intro{max-width:62ch;color:var(--hondo-2);margin:0 0 16px}
+.ficha{background:var(--papel);border:1px solid var(--linea);border-radius:16px;padding:16px 16px 14px;margin-bottom:12px;}
+.ficha svg.pez{width:96px;height:48px}
+.ficha h3{font:800 26px/1 var(--display);margin:0 0 2px}
+.ficha .cient{font-style:italic;font-size:13px;color:var(--hondo-2);margin:0 0 8px}
+.ficha p{margin:0 0 6px;font-size:15px;max-width:62ch}
+.ficha .et{color:var(--hondo-2)}
+.meses{display:grid;grid-template-columns:repeat(12,1fr);gap:2px;margin-top:8px;max-width:320px}
+.meses span{font-size:10px;text-align:center;padding:3px 0;border-radius:3px;background:var(--carta);color:var(--hondo-2)}
+.meses span.si{background:var(--agua);color:var(--papel)}
+.meses span.ahora{outline:2px solid var(--boya)}
+.aviso-legal{font-size:13px;color:var(--hondo-2);max-width:62ch;margin:18px 0}
+
+/* Barra inferior */
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--hondo);display:grid;grid-template-columns:1fr 1fr;padding-bottom:var(--safe-b);z-index:10}
+.tabs a{color:var(--agua-claro);text-decoration:none;text-align:center;padding:10px 0 12px;font-weight:600;font-size:14px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tabs a svg{width:22px;height:22px}
+.tabs a[aria-current="page"]{color:var(--boya)}
+
+.ola-anim{animation:subir 1.1s cubic-bezier(.2,.7,.2,1) both}
+@keyframes subir{from{transform:translateY(100%)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.ola-anim{animation:none}.dia .nivel{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1 class="marca"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M17 3v15a6 6 0 1 1-12 0" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M5 18l-2.5 3.5" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="9" r="5" fill="#EDB01A"/></svg>Pique</h1>
+    <label class="lugar"><span class="sr" style="position:absolute;left:-9999px">Lugar de pesca</span><select id="lugar"></select></label>
+  </header>
+  <div class="modos" role="group" aria-label="Modalidad de pesca" id="modos">
+    <button type="button" data-modo="orilla">Orilla</button>
+    <button type="button" data-modo="roca">Roca</button>
+    <button type="button" data-modo="bote">Bote</button>
+  </div>
+  <p class="estado" id="estado" role="status"></p>
+
+  <main>
+    <section class="vista activa" id="v-calendario" aria-label="Calendario">
+      <div id="hoy"></div>
+      <div class="columnas">
+        <div>
+          <div class="mes-cab">
+            <button class="flecha" id="mes-ant" type="button" aria-label="Mes anterior"><svg viewBox="0 0 16 16"><path d="M10 2L4 8l6 6" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+            <h2 id="mes-titulo"></h2>
+            <button class="flecha" id="mes-sig" type="button" aria-label="Mes siguiente"><svg viewBox="0 0 16 16"><path d="M6 2l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+          </div>
+          <div class="semana" aria-hidden="true"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+          <div class="grilla" id="grilla" role="grid"></div>
+          <p class="leyenda">
+            <span><i style="background:var(--agua)"></i>Más agua, mejor día</span>
+            <span><i style="background:repeating-linear-gradient(135deg,var(--agua-claro) 0 3px,transparent 3px 7px)"></i>Solo luna, aún sin pronóstico</span>
+            <span><i style="background:var(--boya);border-radius:50%;width:10px"></i>Día destacado</span>
+            <span><i style="background:var(--alerta)"></i>Mar o viento peligroso</span>
+          </p>
+        </div>
+        <div class="detalle" id="detalle" tabindex="-1"></div>
+      </div>
+    </section>
+
+    <section class="vista" id="v-especies" aria-label="Especies">
+      <h2 style="font:800 34px/1 var(--display);margin:6px 0 8px">Especies de la zona central</h2>
+      <p class="esp-intro" id="esp-intro"></p>
+      <div id="fichas"></div>
+      <p class="aviso-legal">Antes de salir, revisa vedas y tallas mínimas en Sernapesca, y el estado del puerto con la Capitanía de Puerto. Si el puerto está cerrado, no se pesca desde roca ni en bote. Las temporadas son orientativas.</p>
+    </section>
+  </main>
+</div>
+
+<nav class="tabs" aria-label="Secciones">
+  <a href="#calendario" id="t-calendario" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M3 17c3-2 6 2 9 0s6-2 9 0" stroke-width="1.6"/></svg>Calendario</a>
+  <a href="#especies" id="t-especies"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12c3-5 9-6 14-2l5-4v12l-5-4c-5 4-11 3-14-2z"/><circle cx="7.5" cy="11" r="1" fill="currentColor"/></svg>Especies</a>
+</nav>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2, '0');
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('pique.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('pique.' + k, JSON.stringify(v)); } catch (e) {} }
+};
+
+/* ---------- Lugares (costa central) ---------- */
+const LUGARES = [
+  { id: 'papudo', nombre: 'Papudo', lat: -32.507, lng: -71.449 },
+  { id: 'maitencillo', nombre: 'Maitencillo', lat: -32.650, lng: -71.440 },
+  { id: 'quintero', nombre: 'Quintero', lat: -32.780, lng: -71.530 },
+  { id: 'concon', nombre: 'Concón', lat: -32.930, lng: -71.550 },
+  { id: 'vina', nombre: 'Viña del Mar', lat: -33.020, lng: -71.570 },
+  { id: 'valparaiso', nombre: 'Valparaíso', lat: -33.030, lng: -71.630 },
+  { id: 'lagunaverde', nombre: 'Laguna Verde', lat: -33.105, lng: -71.675 },
+  { id: 'quintay', nombre: 'Quintay', lat: -33.192, lng: -71.700 },
+  { id: 'algarrobo', nombre: 'Algarrobo', lat: -33.360, lng: -71.690 },
+  { id: 'elquisco', nombre: 'El Quisco', lat: -33.400, lng: -71.700 },
+  { id: 'cartagena', nombre: 'Cartagena', lat: -33.550, lng: -71.610 },
+  { id: 'sanantonio', nombre: 'San Antonio', lat: -33.590, lng: -71.630 },
+  { id: 'santodomingo', nombre: 'Rocas de Santo Domingo', lat: -33.640, lng: -71.640 }
+];
+
+/* ---------- Modalidades: umbrales de viento (km/h) y olas (m) ---------- */
+const MODOS = {
+  orilla: { nombre: 'orilla', viento: [15, 35], ola: { plano: .3, lo: .6, hi: 1.8, malo: 2.8 }, peligro: { ola: 3.2, viento: 45 } },
+  roca:   { nombre: 'roca',   viento: [15, 30], ola: { plano: .2, lo: .4, hi: 1.4, malo: 2.3 }, peligro: { ola: 2.3, viento: 40 } },
+  bote:   { nombre: 'bote',   viento: [10, 25], ola: { plano: 0,  lo: 0,  hi: .9,  malo: 1.8 }, peligro: { ola: 1.8, viento: 28 } }
+};
+
+/* ---------- Especies ---------- */
+const ESPECIES = [
+  { id: 'corvina', nombre: 'Corvina', cient: 'Cilus gilberti', modos: ['orilla', 'roca'], meses: [10,11,12,1,2,3,4], mar: 'mov',
+    carnada: 'Camarón, pulga de mar, jibia o gusano de mar.', tecnica: 'Lanzado desde la playa con plomada pirámide y bajo de dos anzuelos, buscando canaletas y la rompiente.', cuando: 'Agua algo turbia y mar con movimiento. Atardecer y noche.' },
+  { id: 'lenguado', nombre: 'Lenguado', cient: 'Paralichthys adspersus', modos: ['orilla', 'bote'], meses: [10,11,12,1,2,3], mar: 'calma',
+    carnada: 'Pejerrey vivo o camarón. Vinilos tipo shad.', tecnica: 'Recogida lenta pegada al fondo en playas de arena, bahías y desembocaduras.', cuando: 'Mar calmo y agua clara.' },
+  { id: 'pejerrey', nombre: 'Pejerrey de mar', cient: 'Odontesthes regia', modos: ['orilla', 'roca', 'bote'], meses: [1,2,3,4,5,6,7,8,9,10,11,12], mar: 'calma',
+    carnada: 'Tiritas de jibia, camarón o chape.', tecnica: 'Línea con boya y anzuelos chicos desde rocas, muelles y caletas.', cuando: 'Aguas tranquilas, mejor en la mañana.' },
+  { id: 'robalo', nombre: 'Róbalo', cient: 'Eleginops maclovinus', modos: ['orilla'], meses: [4,5,6,7,8,9,10], mar: 'any',
+    carnada: 'Gusano, camarón o pulga de mar.', tecnica: 'Pesca de fondo en desembocaduras y esteros (Aconcagua, Maipo).', cuando: 'Con marea llenante.' },
+  { id: 'rollizo', nombre: 'Rollizo', cient: 'Pinguipes chilensis', modos: ['roca', 'bote'], meses: [1,2,3,4,5,6,7,8,9,10,11,12], mar: 'any',
+    carnada: 'Jaiba, choro, lapa o camarón.', tecnica: 'Fondo entre rocas con plomo corredizo y anzuelo firme.', cuando: 'Mar moderado, con algo de espuma en la roca.' },
+  { id: 'vieja', nombre: 'Vieja', cient: 'Graus nigra', modos: ['roca'], meses: [1,2,3,4,5,6,7,8,9,10,11,12], mar: 'any',
+    carnada: 'Jaiba, cangrejo o choro.', tecnica: 'Fondo pegado a la roca, en cuevas y grietas. Hay que sacarla rápido de la piedra.', cuando: 'Mar con movimiento suave. Revisa la normativa vigente para esta especie.' },
+  { id: 'cabrilla', nombre: 'Cabrilla', cient: 'Paralabrax humeralis', modos: ['roca', 'bote'], meses: [1,2,3,4,5,6,7,8,9,10,11,12], mar: 'any',
+    carnada: 'Jibia o camarón. Jigs y vinilos.', tecnica: 'Fondos rocosos. Desde bote, jig vertical sobre las piedras.', cuando: 'Cambios de marea.' },
+  { id: 'jerguilla', nombre: 'Jerguilla', cient: 'Aplodactylus punctatus', modos: ['roca'], meses: [10,11,12,1,2,3], mar: 'calma',
+    carnada: 'Huiro, luga o choro picado.', tecnica: 'Boya cerca de los bosques de algas.', cuando: 'Mar tranquilo y agua clara.' },
+  { id: 'blanquillo', nombre: 'Blanquillo', cient: 'Prolatilus jugularis', modos: ['bote'], meses: [1,2,3,4,5,6,7,8,9,10,11,12], mar: 'calma',
+    carnada: 'Jibia o camarón.', tecnica: 'Fondo sobre arena desde bote, entre 20 y 60 m.', cuando: 'Mar calmo y poco viento.' },
+  { id: 'jurel', nombre: 'Jurel', cient: 'Trachurus murphyi', modos: ['bote', 'roca'], meses: [12,1,2,3,4], mar: 'any',
+    carnada: 'Plumas, jigs metálicos o jibia.', tecnica: 'Buscar cardúmenes y aves trabajando sobre el agua.', cuando: 'Verano, con agua más templada.' },
+  { id: 'sierra', nombre: 'Sierra', cient: 'Thyrsites atun', modos: ['bote'], meses: [1,2,3,4,5], mar: 'any',
+    carnada: 'Cucharas, rapalas o pescado en tira.', tecnica: 'Curricán a 3 a 5 nudos.', cuando: 'Temprano en la mañana.' },
+  { id: 'congrio', nombre: 'Congrio', cient: 'Genypterus spp.', modos: ['roca', 'bote'], meses: [1,2,3,4,5,6,7,8,9,10,11,12], mar: 'any',
+    carnada: 'Jibia, sardina o pescado.', tecnica: 'Fondo en zonas de roca.', cuando: 'De noche.' }
+];
+
+/* ---------- Astronomía (adaptado del algoritmo de SunCalc, V. Agafonkin) ---------- */
+const rad = Math.PI / 180, dayMs = 864e5, J1970 = 2440588, J2000 = 2451545, ecl = rad * 23.4397;
+const toDays = t => t / dayMs - 0.5 + J1970 - J2000;
+const RA = (l, b) => Math.atan2(Math.sin(l) * Math.cos(ecl) - Math.tan(b) * Math.sin(ecl), Math.cos(l));
+const DEC = (l, b) => Math.asin(Math.sin(b) * Math.cos(ecl) + Math.cos(b) * Math.sin(ecl) * Math.sin(l));
+const ALT = (H, phi, d) => Math.asin(Math.sin(phi) * Math.sin(d) + Math.cos(phi) * Math.cos(d) * Math.cos(H));
+const SID = (d, lw) => rad * (280.16 + 360.9856235 * d) - lw;
+function sunC(d) { const M = rad * (357.5291 + 0.98560028 * d); const C = rad * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M)); const L = M + C + rad * 102.9372 + Math.PI; return { dec: DEC(L, 0), ra: RA(L, 0) }; }
+function moonC(d) { const L = rad * (218.316 + 13.176396 * d), M = rad * (134.963 + 13.064993 * d), F = rad * (93.272 + 13.22935 * d); const l = L + rad * 6.289 * Math.sin(M), b = rad * 5.128 * Math.sin(F); return { ra: RA(l, b), dec: DEC(l, b), dist: 385001 - 20905 * Math.cos(M) }; }
+function altitud(fn, t, lat, lng) { const d = toDays(t), c = fn(d); return ALT(SID(d, rad * -lng) - c.ra, rad * lat, c.dec) / rad; }
+function iluminacion(t) {
+  const d = toDays(t), s = sunC(d), m = moonC(d), sd = 149598000;
+  const phi = Math.acos(Math.sin(s.dec) * Math.sin(m.dec) + Math.cos(s.dec) * Math.cos(m.dec) * Math.cos(s.ra - m.ra));
+  const inc = Math.atan2(sd * Math.sin(phi), m.dist - sd * Math.cos(phi));
+  const ang = Math.atan2(Math.cos(s.dec) * Math.sin(s.ra - m.ra), Math.sin(s.dec) * Math.cos(m.dec) - Math.cos(s.dec) * Math.sin(m.dec) * Math.cos(s.ra - m.ra));
+  return { fraccion: (1 + Math.cos(inc)) / 2, fase: 0.5 + 0.5 * inc * (ang < 0 ? -1 : 1) / Math.PI };
+}
+const astroCache = new Map();
+function astroDia(fecha, lugar) {
+  const clave = claveDia(fecha) + lugar.id;
+  if (astroCache.has(clave)) return astroCache.get(clave);
+  const t0 = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()).getTime();
+  const paso = 10 * 60e3, n = 145, lunaAlt = [], solAlt = [];
+  for (let i = 0; i < n; i++) { const t = t0 + i * paso; lunaAlt.push(altitud(moonC, t, lugar.lat, lugar.lng)); solAlt.push(altitud(sunC, t, lugar.lat, lugar.lng)); }
+  const cruces = (arr, umbral) => { const sube = [], baja = []; for (let i = 1; i < n; i++) { const a = arr[i - 1] - umbral, b = arr[i] - umbral; if (a < 0 && b >= 0) sube.push(t0 + (i - 1 + a / (a - b)) * paso); if (a >= 0 && b < 0) baja.push(t0 + (i - 1 + a / (a - b)) * paso); } return { sube, baja }; };
+  const extremo = (arr, signo) => { let k = 0; for (let i = 1; i < n; i++) if (signo * arr[i] > signo * arr[k]) k = i; if (k === 0 || k === n - 1) return null; const y0 = arr[k - 1], y1 = arr[k], y2 = arr[k + 1], den = y0 - 2 * y1 + y2; const off = den ? 0.5 * (y0 - y2) / den : 0; return t0 + (k + off) * paso; };
+  const luna = cruces(lunaAlt, -0.44), sol = cruces(solAlt, -0.833);
+  const transito = extremo(lunaAlt, 1), antitransito = extremo(lunaAlt, -1);
+  const H = 3600e3;
+  const mayores = [transito, antitransito].filter(Boolean).map(t => [t - H, t + H]);
+  const menores = [...luna.sube, ...luna.baja].map(t => [t - H / 2, t + H / 2]);
+  const il = iluminacion(t0 + 12 * H);
+  const r = { t0, solAlt, paso, salidaSol: sol.sube[0] || null, puestaSol: sol.baja[0] || null, salidaLuna: luna.sube[0] || null, puestaLuna: luna.baja[0] || null, mayores, menores, fase: il.fase, fraccion: il.fraccion };
+  r.factorFase = Math.abs(Math.cos(2 * Math.PI * r.fase));
+  astroCache.set(clave, r);
+  return r;
+}
+function nombreFase(p) {
+  if (p < .03 || p > .97) return 'Luna nueva';
+  if (p < .22) return 'Creciente';
+  if (p < .28) return 'Cuarto creciente';
+  if (p < .47) return 'Gibosa creciente';
+  if (p < .53) return 'Luna llena';
+  if (p < .72) return 'Gibosa menguante';
+  if (p < .78) return 'Cuarto menguante';
+  return 'Menguante';
+}
+/* Luna vista desde el hemisferio sur: la creciente se ilumina por la izquierda */
+function svgLuna(fase, fraccion, oscuro = '#C3D2D0', claro = '#F6F9F8', borde = '#0F2E3A') {
+  const r = 10, cx = 12, cy = 12;
+  const creciente = fase < .5;
+  const izquierda = creciente; // hemisferio sur
+  const rx = Math.abs(2 * fraccion - 1) * r;
+  const gibosa = fraccion > .5;
+  const sLimbo = izquierda ? 0 : 1;
+  const sTerm = izquierda ? (gibosa ? 0 : 1) : (gibosa ? 1 : 0);
+  const d = `M${cx} ${cy - r} A${r} ${r} 0 0 ${sLimbo} ${cx} ${cy + r} A${rx.toFixed(2)} ${r} 0 0 ${sTerm} ${cx} ${cy - r}Z`;
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="${oscuro}" stroke="${borde}" stroke-width="1"/>${fraccion > .015 ? `<path d="${d}" fill="${claro}"/>` : ''}<circle cx="12" cy="12" r="10" fill="none" stroke="${borde}" stroke-width="1"/></svg>`;
+}
+
+/* ---------- Fechas ---------- */
+const claveDia = f => `${f.getFullYear()}-${pad(f.getMonth() + 1)}-${pad(f.getDate())}`;
+const deClave = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const hhmm = t => { if (t == null) return 'sin dato'; const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const fmtLargo = new Intl.DateTimeFormat('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+const fmtMes = new Intl.DateTimeFormat('es-CL', { month: 'long', year: 'numeric' });
+const mayus = s => s.charAt(0).toUpperCase() + s.slice(1);
+const dec1 = v => v.toFixed(1).replace('.', ',');
+const parseLocal = s => { const [f, h] = s.split('T'); const [y, m, d] = f.split('-').map(Number); const [hh, mm] = h.split(':').map(Number); return new Date(y, m - 1, d, hh, mm).getTime(); };
+
+/* ---------- Estado ---------- */
+const hoyClave = claveDia(new Date());
+const S = {
+  lugar: store.get('lugar', 'valparaiso'),
+  modo: store.get('modo', 'orilla'),
+  mes: (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })(),
+  sel: hoyClave,
+  datos: null,
+  estado: ''
+};
+const lugarActual = () => LUGARES.find(l => l.id === S.lugar) || LUGARES[5];
+
+/* ---------- Datos de Open-Meteo ---------- */
+async function pedir(url) { const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
+function urls(l) {
+  const base = `latitude=${l.lat}&longitude=${l.lng}&timezone=America%2FSantiago`;
+  return {
+    clima: `https://api.open-meteo.com/v1/forecast?${base}&hourly=temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,cloud_cover,precipitation&forecast_days=16&wind_speed_unit=kmh`,
+    mar: `https://marine-api.open-meteo.com/v1/marine?latitude=${l.lat}&longitude=${(l.lng - 0.04).toFixed(3)}&timezone=America%2FSantiago&hourly=wave_height,wave_period,swell_wave_height,sea_surface_temperature,sea_level_height_msl&forecast_days=8`
+  };
+}
+function combinar(clima, mar) {
+  const horas = {};
+  const meter = (src, mapa) => {
+    if (!src || !src.hourly) return;
+    const h = src.hourly;
+    h.time.forEach((t, i) => { const o = horas[t] || (horas[t] = {}); for (const [k, v] of Object.entries(mapa)) { const val = h[k] && h[k][i]; if (val != null) o[v] = val; } });
+  };
+  meter(clima, { temperature_2m: 'temp', wind_speed_10m: 'viento', wind_gusts_10m: 'racha', wind_direction_10m: 'dir', pressure_msl: 'presion', cloud_cover: 'nubes', precipitation: 'lluvia' });
+  meter(mar, { wave_height: 'ola', wave_period: 'periodo', swell_wave_height: 'mar_fondo', sea_surface_temperature: 'agua', sea_level_height_msl: 'nivel' });
+  return { horas, guardado: Date.now() };
+}
+function mareas(datos) {
+  if (!datos) return [];
+  const serie = Object.keys(datos.horas).sort().map(k => ({ t: parseLocal(k), h: datos.horas[k].nivel })).filter(p => p.h != null);
+  const out = [];
+  for (let i = 1; i < serie.length - 1; i++) {
+    const a = serie[i - 1].h, b = serie[i].h, c = serie[i + 1].h;
+    const alta = b > a && b >= c, baja = b < a && b <= c;
+    if (!alta && !baja) continue;
+    const den = a - 2 * b + c, off = den ? 0.5 * (a - c) / den : 0;
+    const h = b - 0.25 * (a - c) * off;
+    out.push({ t: serie[i].t + off * 3600e3, h, tipo: alta ? 'Pleamar' : 'Bajamar' });
+  }
+  return out;
+}
+async function cargar() {
+  const l = lugarActual();
+  const guardado = store.get('datos.' + l.id, null);
+  S.datos = guardado; S.mareas = mareas(guardado);
+  S.estado = guardado ? 'Actualizando pronóstico…' : 'Cargando pronóstico…';
+  render();
+  try {
+    const u = urls(l);
+    const [clima, mar] = await Promise.all([pedir(u.clima), pedir(u.mar).catch(() => null)]);
+    const d = combinar(clima, mar);
+    S.datos = d; S.mareas = mareas(d);
+    store.set('datos.' + l.id, d);
+    S.estado = `Pronóstico actualizado a las ${hhmm(d.guardado)}.` + (mar ? '' : ' Sin datos de oleaje por ahora.');
+    S.aviso = false;
+  } catch (e) {
+    if (guardado) { S.estado = `Sin conexión. Mostrando el pronóstico guardado del ${fmtLargo.format(new Date(guardado.guardado))} a las ${hhmm(guardado.guardado)}.`; }
+    else { S.estado = 'Sin conexión al pronóstico. Por ahora ves solo luna, sol y períodos solunares.'; }
+    S.aviso = true;
+  }
+  render();
+}
+
+/* ---------- Puntaje ---------- */
+const H = 3600e3;
+function solapamiento(a0, a1, rangos) { let m = 0; for (const [b0, b1] of rangos) { const s = Math.max(0, Math.min(a1, b1) - Math.max(a0, b0)); m = Math.max(m, s / (a1 - a0)); } return m; }
+function puntajeViento(w, cfg) { const [g, b] = cfg.viento; return w <= g ? 1 : w >= b ? 0 : 1 - (w - g) / (b - g); }
+function puntajeOla(h, cfg) {
+  const o = cfg.ola;
+  if (o.lo > 0 && h < o.plano) return .6;
+  if (h < o.lo) return .6 + .4 * (h - o.plano) / (o.lo - o.plano);
+  if (h <= o.hi) return 1;
+  if (h >= o.malo) return 0;
+  return 1 - (h - o.hi) / (o.malo - o.hi);
+}
+const registro = t => { if (!S.datos) return null; const d = new Date(t); return S.datos.horas[`${claveDia(d)}T${pad(d.getHours())}:00`] || null; };
+
+function analizarDia(fecha) {
+  const l = lugarActual(), cfg = MODOS[S.modo], a = astroDia(fecha, l);
+  const horas = [];
+  let conClima = false, conMar = false;
+  for (let h = 0; h < 24; h++) {
+    const t = a.t0 + h * H, r = registro(t) || {};
+    const mayor = solapamiento(t, t + H, a.mayores), menor = solapamiento(t, t + H, a.menores);
+    const solMid = a.solAlt[Math.min(a.solAlt.length - 1, Math.round((h + .5) * 6))];
+    const crepusculo = solMid > -7 && solMid < 10 ? 1 : 0;
+    let sol = .25 + .75 * Math.max(mayor, .75 * menor, .6 * crepusculo);
+    if (mayor > .3 && crepusculo) sol += .15;
+    sol = clamp(sol);
+    const comp = [[sol, .30]];
+    let marea = null;
+    if (r.nivel != null) {
+      const ra = registro(t - H), rb = registro(t + H);
+      if (ra && rb && ra.nivel != null && rb.nivel != null) marea = { tasa: Math.abs(rb.nivel - ra.nivel) / 2, sube: rb.nivel > ra.nivel };
+    }
+    if (r.viento != null) { comp.push([puntajeViento(r.viento, cfg), .25]); conClima = true; }
+    if (r.ola != null) { comp.push([puntajeOla(r.ola, cfg), .25]); conMar = true; }
+    horas.push({ h, t, r, sol, marea, comp, mayor, menor });
+  }
+  const maxTasa = Math.max(0, ...horas.map(x => x.marea ? x.marea.tasa : 0));
+  for (const x of horas) {
+    if (x.marea && maxTasa > 0) {
+      let m = .35 + .65 * x.marea.tasa / maxTasa;
+      if (S.modo !== 'bote' && x.marea.sube) m += .1;
+      x.comp.push([clamp(m), .20]);
+    }
+    const peso = x.comp.reduce((s, c) => s + c[1], 0);
+    x.puntaje = x.comp.reduce((s, c) => s + c[0] * c[1], 0) / peso;
+  }
+  const estimado = !conClima;
+  const top = [...horas].sort((p, q) => q.puntaje - p.puntaje).slice(0, 4);
+  const media = top.reduce((s, x) => s + x.puntaje, 0) / top.length;
+  const amanecerMayor = horas.some(x => x.mayor > .3 && x.sol >= .99);
+  let pts = estimado ? 30 + 55 * a.factorFase + (amanecerMayor ? 15 : 0) : 100 * (.3 * a.factorFase + .7 * media);
+
+  // Tendencia de presión (24 h)
+  let presion = null;
+  const p0 = registro(a.t0 + 6 * H), p1 = registro(a.t0 + 30 * H), pm = registro(a.t0 - 18 * H);
+  const ref = pm && pm.presion != null ? pm : null;
+  if (p0 && p0.presion != null && (ref || (p1 && p1.presion != null))) {
+    const delta = ref ? p0.presion - ref.presion : p1.presion - p0.presion;
+    presion = delta;
+    if (Math.abs(delta) < 3) pts += 3; else if (delta < 0 && delta > -6) pts += 5; else if (delta > 6) pts -= 5;
+  }
+
+  // Seguridad: horario diurno
+  let olaMax = null, vientoMax = null;
+  for (const x of horas.slice(6, 21)) {
+    if (x.r.ola != null) olaMax = Math.max(olaMax ?? 0, x.r.ola);
+    if (x.r.viento != null) vientoMax = Math.max(vientoMax ?? 0, x.r.viento);
+  }
+  const peligro = (olaMax != null && olaMax >= cfg.peligro.ola) || (vientoMax != null && vientoMax >= cfg.peligro.viento);
+  if (peligro) pts = Math.min(pts, 25);
+  pts = Math.round(clamp(pts, 0, 100));
+
+  // Mejores ventanas de 2 horas, sin traslape
+  const ventanas = [];
+  const pares = [];
+  for (let h = 0; h < 23; h++) pares.push({ h, v: (horas[h].puntaje + horas[h + 1].puntaje) / 2 });
+  pares.sort((p, q) => q.v - p.v);
+  for (const p of pares) { if (ventanas.length >= 2) break; if (ventanas.every(w => Math.abs(w.h - p.h) >= 3)) ventanas.push(p); }
+  ventanas.sort((p, q) => p.h - q.h);
+
+  const del = horas.map(x => x.r.ola).filter(v => v != null);
+  const olaMedia = del.length ? del.reduce((s, v) => s + v, 0) / del.length : null;
+  return { fecha, a, horas, pts, estimado, conMar, peligro, olaMax, vientoMax, ventanas, presion, olaMedia };
+}
+function veredicto(p) { return p >= 75 ? 'Muy bueno' : p >= 60 ? 'Bueno' : p >= 45 ? 'Regular' : 'Malo'; }
+const textoVentana = w => `${pad(w.h)}:00 a ${pad(w.h + 2)}:00`;
+const unir = arr => arr.length < 2 ? arr.join('') : arr.slice(0, -1).join(', ') + ' y ' + arr[arr.length - 1];
+
+/* ---------- Render: hoy ---------- */
+function reglaSVG(p) {
+  const alto = 300, ancho = 74, y = v => 14 + (100 - v) / 100 * (alto - 28);
+  let marcas = '';
+  for (let v = 0; v <= 100; v += 5) {
+    const largo = v % 10 === 0;
+    marcas += `<line x1="0" x2="${largo ? 22 : 12}" y1="${y(v)}" y2="${y(v)}" stroke="#F6F9F8" stroke-width="${largo ? 2 : 1}"/>`;
+    if (v % 20 === 0) marcas += `<text x="27" y="${y(v) + 5}" fill="#F6F9F8" font-family="Big Shoulders Display, sans-serif" font-weight="600" font-size="15">${v}</text>`;
+  }
+  const nivel = y(p);
+  const ola = `M0 ${nivel} q 9 -5 18 0 t 18 0 t 18 0 t 18 0 t 18 0 V ${alto} H 0 Z`;
+  return `<svg class="regla" viewBox="0 0 ${ancho} ${alto}" preserveAspectRatio="none" role="img" aria-label="Índice de pesca ${p} de 100">
+    <defs><clipPath id="cr"><rect x="0" y="0" width="${ancho}" height="${alto}" rx="6"/></clipPath></defs>
+    <g clip-path="url(#cr)">
+      <rect x="0" y="0" width="${ancho}" height="${alto}" fill="#16404F"/>
+      <g class="ola-anim"><path d="${ola}" fill="#2B6E8C"/><path d="M0 ${nivel} q 9 -5 18 0 t 18 0 t 18 0 t 18 0 t 18 0" fill="none" stroke="#EDB01A" stroke-width="2.5"/></g>
+      ${marcas}
+    </g></svg>`;
+}
+function renderHoy() {
+  const fecha = deClave(hoyClave), d = analizarDia(fecha), a = d.a;
+  const ahora = Date.now(), r = registro(ahora) || {};
+  const prox = (S.mareas || []).find(m => m.t > ahora);
+  const datos = [
+    ['Luna', `${nombreFase(a.fase)}, ${Math.round(a.fraccion * 100)} %`],
+    ['Mareas', a.factorFase > .8 ? 'Vivas' : a.factorFase < .3 ? 'Muertas' : 'Intermedias'],
+    prox ? [prox.tipo, `${hhmm(prox.t)}`] : null,
+    r.viento != null ? ['Viento ahora', `${Math.round(r.viento)} km/h ${rumbo(r.dir)}`] : null,
+    r.ola != null ? ['Olas ahora', `${dec1(r.ola)} m${r.periodo ? `, ${Math.round(r.periodo)} s` : ''}`] : null,
+    r.agua != null ? ['Agua', `${dec1(r.agua)} °C`] : null,
+    ['Sol', `${hhmm(a.salidaSol)} a ${hhmm(a.puestaSol)}`]
+  ].filter(Boolean);
+  $('#hoy').innerHTML = `<section class="hoy" aria-label="Hoy">
+    ${reglaSVG(d.pts)}
+    <div>
+      <p class="hoy-fecha">Hoy, ${fmtLargo.format(fecha)} en ${lugarActual().nombre}, desde ${MODOS[S.modo].nombre}</p>
+      <p class="hoy-veredicto">${d.peligro ? 'No salir' : veredicto(d.pts)}</p>
+      <p class="hoy-puntos">${d.pts} de 100${d.estimado ? ', calculado solo con la luna' : ''}</p>
+      ${d.peligro ? `<p class="peligro">${textoPeligro(d)}</p>` : ''}
+      <p class="hoy-horas">Mejores horas: <strong>${unir(d.ventanas.map(textoVentana))}</strong></p>
+      <dl class="datos">${datos.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+    </div>
+    <span class="luna-grande">${svgLuna(a.fase, a.fraccion, '#16404F', '#F6F9F8', '#9DBFCB')}</span>
+  </section>`;
+}
+function textoPeligro(d) {
+  const cfg = MODOS[S.modo], partes = [];
+  if (d.olaMax != null && d.olaMax >= cfg.peligro.ola) partes.push(`olas de hasta ${dec1(d.olaMax)} m`);
+  if (d.vientoMax != null && d.vientoMax >= cfg.peligro.viento) partes.push(`viento de hasta ${Math.round(d.vientoMax)} km/h`);
+  return `Se esperan ${unir(partes)}. No se recomienda pescar desde ${cfg.nombre}.`;
+}
+const RUMBOS = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+const rumbo = g => g == null ? '' : RUMBOS[Math.round(g / 45) % 8];
+
+/* ---------- Render: calendario ---------- */
+function renderMes() {
+  const m = S.mes;
+  $('#mes-titulo').textContent = mayus(fmtMes.format(m));
+  const primero = (m.getDay() + 6) % 7;
+  const dias = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
+  let html = '';
+  for (let i = 0; i < primero; i++) html += '<span class="dia fuera" aria-hidden="true"></span>';
+  for (let d = 1; d <= dias; d++) {
+    const f = new Date(m.getFullYear(), m.getMonth(), d), k = claveDia(f), x = analizarDia(f);
+    const nivel = x.estimado ? 'estimado' : x.pts >= 60 ? '' : x.pts >= 45 ? 'medio' : 'bajo';
+    const alto = !x.estimado && x.pts >= 72;
+    const etiqueta = `${fmtLargo.format(f)}: ${x.peligro ? 'no recomendado' : veredicto(x.pts)}, ${x.pts} de 100${x.estimado ? ', solo luna' : ''}`;
+    html += `<button type="button" role="gridcell" class="dia${k === hoyClave ? ' hoy-cel' : ''}${alto ? ' alto' : ''}" data-k="${k}" aria-selected="${k === S.sel}" aria-label="${etiqueta}">
+      <span class="num">${d}</span><span class="lunita">${svgLuna(x.a.fase, x.a.fraccion)}</span>
+      <span class="nivel ${nivel}" style="height:${Math.max(6, x.pts)}%"></span>
+      ${!x.estimado && x.pts >= 75 && !x.peligro ? '<span class="boya"></span>' : ''}
+      ${x.peligro ? '<span class="riesgo" aria-hidden="true">!</span>' : ''}
+    </button>`;
+  }
+  $('#grilla').innerHTML = html;
+}
+
+/* ---------- Render: detalle del día ---------- */
+function graficoMarea(d) {
+  const W = 400, Hh = 200, x = t => (t - d.a.t0) / (24 * H) * W;
+  const niveles = d.horas.map(h => h.r.nivel).filter(v => v != null);
+  const tieneMarea = niveles.length >= 20;
+  let fondo = '';
+  // Noche
+  const a = d.a;
+  const noches = [];
+  if (a.salidaSol) noches.push([a.t0, a.salidaSol]);
+  if (a.puestaSol) noches.push([a.puestaSol, a.t0 + 24 * H]);
+  for (const [t0, t1] of noches) fondo += `<rect x="${x(t0)}" y="0" width="${x(t1) - x(t0)}" height="${Hh - 22}" fill="#0F2E3A" opacity=".07"/>`;
+  for (const [t0, t1] of a.menores) fondo += `<rect x="${x(t0)}" y="0" width="${Math.max(0, x(t1) - x(t0))}" height="${Hh - 22}" fill="#EDB01A" opacity=".18"/>`;
+  for (const [t0, t1] of a.mayores) fondo += `<rect x="${x(t0)}" y="0" width="${Math.max(0, x(t1) - x(t0))}" height="${Hh - 22}" fill="#EDB01A" opacity=".38"/>`;
+  let ejes = '';
+  for (let h = 0; h <= 24; h += 3) ejes += `<text x="${Math.min(W - 14, Math.max(2, x(a.t0 + h * H) - 8))}" y="${Hh - 6}" font-size="13" fill="#3D5963" font-family="Instrument Sans, sans-serif">${pad(h)}</text>`;
+  let curva = '', marcas = '';
+  if (tieneMarea) {
+    const pts = [];
+    for (let h = -1; h <= 24; h++) { const r = registro(a.t0 + h * H); if (r && r.nivel != null) pts.push([a.t0 + h * H, r.nivel]); }
+    const min = Math.min(...pts.map(p => p[1])) - .15, max = Math.max(...pts.map(p => p[1])) + .25;
+    const y = v => 18 + (max - v) / (max - min) * (Hh - 60);
+    let dd = `M${x(pts[0][0])} ${y(pts[0][1])}`;
+    const P = pts.map(([t, v]) => [x(t), y(v)]);
+    for (let i = 1; i < P.length; i++) {
+      const p0 = P[i - 2] || P[i - 1], p1 = P[i - 1], p2 = P[i], p3 = P[i + 1] || P[i];
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6], c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      dd += ` C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+    }
+    curva = `<path d="${dd} V ${Hh - 22} H ${x(pts[0][0])} Z" fill="#2B6E8C" opacity=".16"/><path d="${dd}" fill="none" stroke="#2B6E8C" stroke-width="2.5"/>`;
+    for (const m of (S.mareas || []).filter(m => m.t >= a.t0 && m.t < a.t0 + 24 * H)) {
+      const px = x(m.t), py = y(m.h), arriba = m.tipo === 'Pleamar';
+      const tx = Math.min(W - 44, Math.max(4, px - 18));
+      marcas += `<circle cx="${px}" cy="${py}" r="4" fill="#0F2E3A"/><text x="${tx}" y="${arriba ? py - 9 : py + 20}" font-size="13" font-weight="600" fill="#0F2E3A" font-family="Instrument Sans, sans-serif">${hhmm(m.t)}</text>`;
+    }
+  } else {
+    marcas = `<text x="${W / 2}" y="${(Hh - 22) / 2}" text-anchor="middle" font-size="15" fill="#3D5963" font-family="Instrument Sans, sans-serif">Aún no hay pronóstico de marea para este día</text>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Curva de marea y períodos solunares">${fondo}${curva}${marcas}<line x1="0" x2="${W}" y1="${Hh - 22}" y2="${Hh - 22}" stroke="#C3D2D0"/>${ejes}</svg>`;
+}
+function flecha(dir) { return `<svg viewBox="0 0 12 12" style="transform:rotate(${(dir + 180) % 360}deg)" aria-hidden="true"><path d="M6 1v10M2.5 4.5L6 1l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>`; }
+function especiesDelDia(d) {
+  const mes = d.fecha.getMonth() + 1;
+  const calma = d.olaMedia != null ? d.olaMedia < 1.0 : null;
+  return ESPECIES.filter(e => e.modos.includes(S.modo) && e.meses.includes(mes))
+    .map(e => ({ e, ok: e.mar === 'any' || calma == null ? 1 : (e.mar === 'calma') === calma ? 2 : 0 }))
+    .sort((p, q) => q.ok - p.ok).slice(0, 4);
+}
+function renderDetalle() {
+  const f = deClave(S.sel), d = analizarDia(f), a = d.a, mejores = new Set();
+  d.ventanas.forEach(w => { mejores.add(w.h); mejores.add(w.h + 1); });
+  const marDia = (S.mareas || []).filter(m => m.t >= a.t0 && m.t < a.t0 + 24 * H);
+  const horas = d.horas.map(x => `<div class="hora${mejores.has(x.h) ? ' mejor' : ''}">
+      <b>${pad(x.h)}</b>
+      <div class="barra" aria-hidden="true"><i style="height:${Math.round(x.puntaje * 100)}%"></i></div>
+      ${x.r.viento != null ? `<div class="viento">${flecha(x.r.dir || 0)}${Math.round(x.r.viento)}</div>` : '<div class="viento">–</div>'}
+      <div class="ola">${x.r.ola != null ? dec1(x.r.ola) + ' m' : ''}</div>
+    </div>`).join('');
+  const especies = especiesDelDia(d);
+  const presion = d.presion == null ? null : Math.abs(d.presion) < 3 ? 'Estable' : d.presion < 0 ? `Bajando (${dec1(d.presion)} hPa)` : `Subiendo (+${dec1(d.presion)} hPa)`;
+  $('#detalle').innerHTML = `
+    <div class="det-cab"><h3>${mayus(fmtLargo.format(f))}</h3><span class="veredicto">${d.peligro ? 'No salir' : veredicto(d.pts)}, ${d.pts}</span></div>
+    <p class="nota">${d.estimado ? 'Este día aún no tiene pronóstico de clima. El índice usa solo la luna y los períodos solunares.' : `Desde ${MODOS[S.modo].nombre} en ${lugarActual().nombre}.`}</p>
+    ${d.peligro ? `<p class="peligro" style="margin-top:12px">${textoPeligro(d)}</p>` : ''}
+    <div class="bloque marea"><h4>Marea y horarios de actividad</h4>${graficoMarea(d)}
+      <p class="leyenda" style="margin-top:6px"><span><i style="background:rgba(237,176,26,.55)"></i>Período mayor</span><span><i style="background:rgba(237,176,26,.22)"></i>Período menor</span><span><i style="background:rgba(15,46,58,.12)"></i>Noche</span></p>
+    </div>
+    <div class="bloque"><h4>Hora a hora</h4><div class="horas">${horas}</div>
+      <p class="nota">Barra: índice de la hora. Abajo: viento en km/h (la flecha indica hacia dónde sopla) y altura de ola.</p></div>
+    <div class="bloque"><h4>Resumen</h4><dl class="filas">
+      <dt>Mejores horas</dt><dd>${unir(d.ventanas.map(textoVentana))}</dd>
+      <dt>Luna</dt><dd>${nombreFase(a.fase)}, ${Math.round(a.fraccion * 100)} % iluminada. Mareas ${a.factorFase > .8 ? 'vivas' : a.factorFase < .3 ? 'muertas' : 'intermedias'}.</dd>
+      ${marDia.length ? `<dt>Mareas</dt><dd>${marDia.map(m => `${m.tipo} ${hhmm(m.t)}`).join(', ')}</dd>` : ''}
+      <dt>Mayores</dt><dd>${a.mayores.map(([s, e]) => `${hhmm(s)} a ${hhmm(e)}`).join(', ') || 'sin dato'}</dd>
+      <dt>Menores</dt><dd>${a.menores.map(([s, e]) => `${hhmm(s)} a ${hhmm(e)}`).join(', ') || 'sin dato'}</dd>
+      <dt>Sol</dt><dd>Sale ${hhmm(a.salidaSol)}, se pone ${hhmm(a.puestaSol)}</dd>
+      ${d.olaMax != null ? `<dt>Olas</dt><dd>Hasta ${dec1(d.olaMax)} m de día</dd>` : ''}
+      ${d.vientoMax != null ? `<dt>Viento</dt><dd>Hasta ${Math.round(d.vientoMax)} km/h de día</dd>` : ''}
+      ${presion ? `<dt>Presión</dt><dd>${presion}</dd>` : ''}
+    </dl></div>
+    <div class="bloque"><h4>Qué buscar desde ${MODOS[S.modo].nombre}</h4>
+      ${especies.length ? `<ul class="especies-dia">${especies.map(({ e }) => `<li><b>${e.nombre}</b><span>${e.cuando} ${e.carnada}</span></li>`).join('')}</ul>` : '<p class="nota">No hay especies en temporada para esta modalidad.</p>'}
+    </div>`;
+}
+
+/* ---------- Render: especies ---------- */
+const MESES = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+function pezSVG(seed) {
+  const n = seed.length, cola = 18 + (n % 4) * 3, alto = 14 + (n % 3) * 4;
+  return `<svg class="pez" viewBox="0 0 96 48" aria-hidden="true"><path d="M8 24 C 22 ${24 - alto}, 56 ${24 - alto}, 72 24 C 56 ${24 + alto}, 22 ${24 + alto}, 8 24 Z" fill="#2B6E8C"/><path d="M70 24 L ${70 + cola} ${24 - cola / 1.6} L ${70 + cola * .8} 24 L ${70 + cola} ${24 + cola / 1.6} Z" fill="#2B6E8C"/><circle cx="20" cy="22" r="2.4" fill="#F6F9F8"/><path d="M30 ${24 - alto / 2} q 4 ${alto / 2} 0 ${alto}" stroke="#F6F9F8" stroke-width="1.5" fill="none" opacity=".6"/></svg>`;
+}
+function renderEspecies() {
+  const mesAct = new Date().getMonth() + 1;
+  const lista = ESPECIES.filter(e => e.modos.includes(S.modo));
+  $('#esp-intro').textContent = `${lista.length} especies que se pescan desde ${MODOS[S.modo].nombre}. Cambia la modalidad arriba para ver las demás.`;
+  $('#fichas').innerHTML = lista.map(e => `<article class="ficha"><div>
+    <h3>${e.nombre}</h3><p class="cient">${e.cient}</p>
+    <p><span class="et">Cuándo: </span>${e.cuando}</p>
+    <p><span class="et">Carnada: </span>${e.carnada}</p>
+    <p><span class="et">Cómo: </span>${e.tecnica}</p>
+    <div class="meses" aria-label="Mejor época">${MESES.map((m, i) => `<span class="${e.meses.includes(i + 1) ? 'si' : ''}${i + 1 === mesAct ? ' ahora' : ''}">${m}</span>`).join('')}</div>
+  </div></article>`).join('');
+}
+
+/* ---------- General ---------- */
+function render() {
+  const est = $('#estado'); est.textContent = S.estado; est.classList.toggle('aviso', !!S.aviso);
+  document.querySelectorAll('#modos button').forEach(b => b.setAttribute('aria-pressed', b.dataset.modo === S.modo));
+  renderHoy(); renderMes(); renderDetalle(); renderEspecies();
+}
+function ruta() {
+  const v = location.hash === '#especies' ? 'especies' : 'calendario';
+  document.querySelectorAll('.vista').forEach(s => s.classList.toggle('activa', s.id === 'v-' + v));
+  document.querySelectorAll('.tabs a').forEach(a => a.removeAttribute('aria-current'));
+  $('#t-' + v).setAttribute('aria-current', 'page');
+}
+function init() {
+  const sel = $('#lugar');
+  sel.innerHTML = LUGARES.map(l => `<option value="${l.id}">${l.nombre}</option>`).join('');
+  sel.value = lugarActual().id;
+  sel.addEventListener('change', () => { S.lugar = sel.value; store.set('lugar', S.lugar); astroCache.clear(); cargar(); });
+  $('#modos').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.modo = b.dataset.modo; store.set('modo', S.modo); render(); });
+  $('#mes-ant').addEventListener('click', () => { S.mes = new Date(S.mes.getFullYear(), S.mes.getMonth() - 1, 1); renderMes(); });
+  $('#mes-sig').addEventListener('click', () => { S.mes = new Date(S.mes.getFullYear(), S.mes.getMonth() + 1, 1); renderMes(); });
+  $('#grilla').addEventListener('click', e => {
+    const b = e.target.closest('.dia[data-k]'); if (!b) return;
+    S.sel = b.dataset.k; renderMes(); renderDetalle();
+    if (window.innerWidth < 900) $('#detalle').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  });
+  window.addEventListener('hashchange', ruta);
+  ruta();
+  cargar();
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+init();
+})();
+</script>
+</body>
+</html>
