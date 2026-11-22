@@ -174,6 +174,10 @@ button,select{font:inherit;color:inherit}
 .leaflet-tooltip{background:var(--panel-2);color:var(--texto);border:1px solid var(--linea);box-shadow:none;font-weight:600}
 .leaflet-tooltip-top:before{border-top-color:var(--linea)}
 .mapa-tit{font-size:13px;color:var(--suave);margin:0 0 8px}
+.zonas{display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
+.zonas::-webkit-scrollbar{display:none}
+.zonas button{flex:0 0 auto;border:1px solid var(--linea);background:var(--panel);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;color:var(--suave);cursor:pointer}
+.zonas button[aria-pressed="true"]{background:rgba(47,211,166,.14);border-color:var(--acento);color:var(--acento)}
 .marca-spot{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-weight:800;font-stretch:85%;font-size:12.5px;color:#0B1620;border:2px solid rgba(255,255,255,.9);box-shadow:0 2px 10px rgba(0,0,0,.5)}
 .marca-spot.sel{outline:3px solid var(--acento);outline-offset:2px}
 .punto{width:10px;height:10px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.35)}
@@ -193,7 +197,12 @@ button,select{font:inherit;color:inherit}
 .esp-intro{color:var(--suave);margin:0 0 12px;max-width:62ch}
 .fichas{display:grid;gap:10px}
 @media (min-width:760px){.fichas{grid-template-columns:1fr 1fr}}
-.ficha{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:14px}
+.ficha{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:0 14px 14px;overflow:hidden}
+.ficha figure{margin:0 -14px 12px;position:relative;background:#0A141C}
+.ficha figure img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}
+.ficha figcaption{position:absolute;right:0;bottom:0;max-width:100%;font-size:10.5px;color:#DCE6EC;background:rgba(6,14,20,.72);padding:3px 8px;border-top-left-radius:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ficha figcaption a{color:inherit}
+.esp-lista img{flex:0 0 64px;width:64px;height:44px;object-fit:cover;border-radius:8px;background:#0A141C}
 .ficha h3{font-size:20px;font-weight:700;font-stretch:88%;margin:0}
 .ficha .cient{font-style:italic;font-size:12.5px;color:var(--tenue);margin:0 0 10px}
 .ficha dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:14px}
@@ -262,6 +271,7 @@ button,select{font:inherit;color:inherit}
   </section>
 
   <section class="vista" id="v-mapa" aria-label="Mapa de puntos de pesca">
+    <div class="zonas" id="zonas" role="group" aria-label="Zona de la costa"></div>
     <p class="mapa-tit" id="mapa-tit"></p>
     <div id="mapa"></div>
     <ul class="spots" id="spots"></ul>
@@ -270,14 +280,14 @@ button,select{font:inherit;color:inherit}
   <section class="vista" id="v-especies" aria-label="Especies">
     <p class="esp-intro" id="esp-intro"></p>
     <div class="fichas" id="fichas"></div>
-    <p class="aviso-legal">Antes de salir, revisa vedas y tallas mínimas en Sernapesca, y el estado del puerto con la Capitanía de Puerto. Si el puerto está cerrado, no se pesca desde roca ni en bote. Las temporadas son orientativas.</p>
+    <p class="aviso-legal">Antes de salir, revisa vedas y tallas mínimas en Sernapesca, y el estado del puerto con la Capitanía de Puerto. Si el puerto está cerrado, no se pesca desde roca ni en bote. Las temporadas son orientativas y corresponden a la zona central. Fotos de Wikimedia Commons e iNaturalist bajo licencias Creative Commons, con su autor en cada imagen.</p>
   </section>
 </main>
 
 <nav class="tabs" aria-label="Secciones">
+  <a href="#mapa" id="t-mapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4z"/><path d="M9 4v14M15 6v14"/></svg>Mapa</a>
   <a href="#hoy" id="t-hoy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>Pronóstico</a>
   <a href="#calendario" id="t-calendario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><rect x="7" y="13" width="3" height="3" rx=".6" fill="currentColor" stroke="none"/></svg>Calendario</a>
-  <a href="#mapa" id="t-mapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4z"/><path d="M9 4v14M15 6v14"/></svg>Mapa</a>
   <a href="#especies" id="t-especies"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2.5 12c3-5 9-6 14-2l5-4v12l-5-4c-5 4-11 3-14-2z"/><circle cx="7.5" cy="11" r="1" fill="currentColor"/></svg>Especies</a>
 </nav>
 
@@ -293,20 +303,60 @@ const store = {
 };
 
 /* ---------- Lugares ---------- */
+const ZONAS = [
+  { id: 'norte', nombre: 'Norte grande' },
+  { id: 'nortechico', nombre: 'Norte chico' },
+  { id: 'centro', nombre: 'Centro' },
+  { id: 'centrosur', nombre: 'Centro sur' },
+  { id: 'sur', nombre: 'Sur y Chiloé' },
+  { id: 'austral', nombre: 'Austral' }
+];
 const LUGARES = [
-  { id: 'papudo', nombre: 'Papudo', lat: -32.507, lng: -71.449 },
-  { id: 'maitencillo', nombre: 'Maitencillo', lat: -32.650, lng: -71.440 },
-  { id: 'quintero', nombre: 'Quintero', lat: -32.780, lng: -71.530 },
-  { id: 'concon', nombre: 'Concón', lat: -32.930, lng: -71.550 },
-  { id: 'vina', nombre: 'Viña del Mar', lat: -33.020, lng: -71.570 },
-  { id: 'valparaiso', nombre: 'Valparaíso', lat: -33.030, lng: -71.630 },
-  { id: 'lagunaverde', nombre: 'Laguna Verde', lat: -33.105, lng: -71.675 },
-  { id: 'quintay', nombre: 'Quintay', lat: -33.192, lng: -71.700 },
-  { id: 'algarrobo', nombre: 'Algarrobo', lat: -33.360, lng: -71.690 },
-  { id: 'elquisco', nombre: 'El Quisco', lat: -33.400, lng: -71.700 },
-  { id: 'cartagena', nombre: 'Cartagena', lat: -33.550, lng: -71.610 },
-  { id: 'sanantonio', nombre: 'San Antonio', lat: -33.590, lng: -71.630 },
-  { id: 'santodomingo', nombre: 'Rocas de Santo Domingo', corto: 'Sto. Domingo', lat: -33.640, lng: -71.640 }
+  { id: 'arica', zona: 'norte', nombre: 'Arica', lat: -18.480, lng: -70.330 },
+  { id: 'iquique', zona: 'norte', nombre: 'Iquique', lat: -20.220, lng: -70.150 },
+  { id: 'tocopilla', zona: 'norte', nombre: 'Tocopilla', lat: -22.090, lng: -70.200 },
+  { id: 'mejillones', zona: 'norte', nombre: 'Mejillones', lat: -23.100, lng: -70.450, mar: [-23.070, -70.420] },
+  { id: 'antofagasta', zona: 'norte', nombre: 'Antofagasta', lat: -23.650, lng: -70.410 },
+  { id: 'taltal', zona: 'norte', nombre: 'Taltal', lat: -25.400, lng: -70.490 },
+  { id: 'chanaral', zona: 'nortechico', nombre: 'Chañaral', lat: -26.350, lng: -70.630 },
+  { id: 'caldera', zona: 'nortechico', nombre: 'Caldera', lat: -27.070, lng: -70.830 },
+  { id: 'huasco', zona: 'nortechico', nombre: 'Huasco', lat: -28.470, lng: -71.220 },
+  { id: 'laserena', zona: 'nortechico', nombre: 'La Serena', lat: -29.900, lng: -71.270 },
+  { id: 'coquimbo', zona: 'nortechico', nombre: 'Coquimbo', lat: -29.950, lng: -71.340 },
+  { id: 'tongoy', zona: 'nortechico', nombre: 'Tongoy', lat: -30.250, lng: -71.500 },
+  { id: 'losvilos', zona: 'nortechico', nombre: 'Los Vilos', lat: -31.910, lng: -71.510 },
+  { id: 'pichidangui', zona: 'nortechico', nombre: 'Pichidangui', lat: -32.140, lng: -71.530 },
+  { id: 'papudo', zona: 'centro', nombre: 'Papudo', lat: -32.507, lng: -71.449 },
+  { id: 'maitencillo', zona: 'centro', nombre: 'Maitencillo', lat: -32.650, lng: -71.440 },
+  { id: 'quintero', zona: 'centro', nombre: 'Quintero', lat: -32.780, lng: -71.530 },
+  { id: 'concon', zona: 'centro', nombre: 'Concón', lat: -32.930, lng: -71.550 },
+  { id: 'vina', zona: 'centro', nombre: 'Viña del Mar', lat: -33.020, lng: -71.570 },
+  { id: 'valparaiso', zona: 'centro', nombre: 'Valparaíso', lat: -33.030, lng: -71.630 },
+  { id: 'lagunaverde', zona: 'centro', nombre: 'Laguna Verde', lat: -33.105, lng: -71.675 },
+  { id: 'quintay', zona: 'centro', nombre: 'Quintay', lat: -33.192, lng: -71.700 },
+  { id: 'algarrobo', zona: 'centro', nombre: 'Algarrobo', lat: -33.360, lng: -71.690 },
+  { id: 'elquisco', zona: 'centro', nombre: 'El Quisco', lat: -33.400, lng: -71.700 },
+  { id: 'cartagena', zona: 'centro', nombre: 'Cartagena', lat: -33.550, lng: -71.610 },
+  { id: 'sanantonio', zona: 'centro', nombre: 'San Antonio', lat: -33.590, lng: -71.630 },
+  { id: 'santodomingo', zona: 'centro', nombre: 'Rocas de Santo Domingo', corto: 'Sto. Domingo', lat: -33.640, lng: -71.640 },
+  { id: 'pichilemu', zona: 'centrosur', nombre: 'Pichilemu', lat: -34.390, lng: -72.010 },
+  { id: 'bucalemu', zona: 'centrosur', nombre: 'Bucalemu', lat: -34.640, lng: -72.050 },
+  { id: 'constitucion', zona: 'centrosur', nombre: 'Constitución', lat: -35.330, lng: -72.420 },
+  { id: 'pelluhue', zona: 'centrosur', nombre: 'Pelluhue', lat: -35.820, lng: -72.570 },
+  { id: 'cobquecura', zona: 'centrosur', nombre: 'Cobquecura', lat: -36.130, lng: -72.790 },
+  { id: 'dichato', zona: 'centrosur', nombre: 'Dichato', lat: -36.550, lng: -72.930 },
+  { id: 'talcahuano', zona: 'centrosur', nombre: 'Talcahuano', lat: -36.720, lng: -73.120 },
+  { id: 'lebu', zona: 'centrosur', nombre: 'Lebu', lat: -37.610, lng: -73.650 },
+  { id: 'tirua', zona: 'sur', nombre: 'Tirúa', lat: -38.340, lng: -73.500 },
+  { id: 'queule', zona: 'sur', nombre: 'Queule', lat: -39.390, lng: -73.210 },
+  { id: 'niebla', zona: 'sur', nombre: 'Niebla (Valdivia)', corto: 'Niebla', lat: -39.870, lng: -73.400 },
+  { id: 'bahiamansa', zona: 'sur', nombre: 'Bahía Mansa', lat: -40.580, lng: -73.740 },
+  { id: 'maullin', zona: 'sur', nombre: 'Maullín', lat: -41.620, lng: -73.600 },
+  { id: 'ancud', zona: 'sur', nombre: 'Ancud', lat: -41.870, lng: -73.830 },
+  { id: 'castro', zona: 'sur', nombre: 'Castro', lat: -42.480, lng: -73.760, mar: [-42.480, -73.700] },
+  { id: 'quellon', zona: 'sur', nombre: 'Quellón', lat: -43.120, lng: -73.620, mar: [-43.150, -73.580] },
+  { id: 'puntaarenas', zona: 'austral', nombre: 'Punta Arenas', lat: -53.160, lng: -70.910, mar: [-53.160, -70.850] },
+  { id: 'porvenir', zona: 'austral', nombre: 'Porvenir', lat: -53.300, lng: -70.370, mar: [-53.290, -70.450] }
 ];
 const MODOS = {
   orilla: { nombre: 'orilla', viento: [10, 30], ola: { plano: .3, lo: .5, hi: 1.5, malo: 2.5 }, peligro: { ola: 3.2, viento: 45 } },
@@ -339,6 +389,9 @@ const ESPECIES = [
   { nombre: 'Congrio', cient: 'Genypterus spp.', modos: ['roca', 'bote'], meses: [1,2,3,4,5,6,7,8,9,10,11,12], mar: 'any',
     carnada: 'Jibia, sardina o pescado.', tecnica: 'Fondo en zonas de roca.', cuando: 'De noche.' }
 ];
+
+/* Fotos con licencia libre (Wikimedia Commons e iNaturalist), con su crédito */
+const FOTOS = {"Corvina": {"src": "https://upload.wikimedia.org/wikipedia/commons/d/df/Corvina.jpg", "autor": "ProzaCL", "lic": "CC BY-SA 4.0", "url": "https://commons.wikimedia.org/wiki/File:Corvina.jpg", "fuente": "Wikimedia Commons"}, "Lenguado": {"src": "https://upload.wikimedia.org/wikipedia/commons/d/d5/Fine_flounder.jpg", "autor": "Daniel Ore Villalba", "lic": "CC BY 3.0", "url": "https://commons.wikimedia.org/wiki/File:Fine_flounder.jpg", "fuente": "Wikimedia Commons"}, "Pejerrey de mar": {"src": "https://inaturalist-open-data.s3.amazonaws.com/photos/6038312/medium.jpg", "autor": "gaston-fernandez", "lic": "CC BY-NC", "url": "https://www.inaturalist.org/taxa/107358", "fuente": "iNaturalist"}, "Róbalo": {"src": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Eleginops_maclovinus_6830057.jpg/960px-Eleginops_maclovinus_6830057.jpg", "autor": "Leonel Roget", "lic": "CC BY 4.0", "url": "https://commons.wikimedia.org/wiki/File:Eleginops_maclovinus_6830057.jpg", "fuente": "Wikimedia Commons"}, "Rollizo": {"src": "https://inaturalist-open-data.s3.amazonaws.com/photos/9909464/medium.jpg", "autor": "Paula González Valderrama", "lic": "CC BY-NC", "url": "https://www.inaturalist.org/taxa/559300", "fuente": "iNaturalist"}, "Vieja": {"src": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Vieja_o_Mulata_%28Graus_Nigra%29.JPG/960px-Vieja_o_Mulata_%28Graus_Nigra%29.JPG", "autor": "Lawenai", "lic": "CC BY-SA 4.0", "url": "https://commons.wikimedia.org/wiki/File:Vieja_o_Mulata_(Graus_Nigra).JPG", "fuente": "Wikimedia Commons"}, "Cabrilla": {"src": "https://inaturalist-open-data.s3.amazonaws.com/photos/92507838/medium.jpeg", "autor": "Daniel", "lic": "CC BY-NC", "url": "https://www.inaturalist.org/taxa/108549", "fuente": "iNaturalist"}, "Jerguilla": {"src": "https://upload.wikimedia.org/wikipedia/commons/b/bf/Aplodactylus_punctatus.jpg", "autor": "Kyle Michael McDaniel", "lic": "CC BY 3.0", "url": "https://commons.wikimedia.org/wiki/File:Aplodactylus_punctatus.jpg", "fuente": "Wikimedia Commons"}, "Blanquillo": {"src": "https://inaturalist-open-data.s3.amazonaws.com/photos/56675247/medium.jpg", "autor": "Leonardo Mondaca Lara", "lic": "CC BY-NC", "url": "https://www.inaturalist.org/taxa/619293", "fuente": "iNaturalist"}, "Jurel": {"src": "https://inaturalist-open-data.s3.amazonaws.com/photos/96852807/medium.jpeg", "autor": "ulrich zanabria", "lic": "CC BY-NC", "url": "https://www.inaturalist.org/taxa/114273", "fuente": "iNaturalist"}, "Sierra": {"src": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Thyrsites_atun%2C_Barracouta_or_snake_Mackerel.jpg/960px-Thyrsites_atun%2C_Barracouta_or_snake_Mackerel.jpg", "autor": "Brian Gratwicke", "lic": "CC BY 2.0", "url": "https://commons.wikimedia.org/wiki/File:Thyrsites_atun,_Barracouta_or_snake_Mackerel.jpg", "fuente": "Wikimedia Commons"}, "Congrio": {"src": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Genypterus_chilensis.jpg/960px-Genypterus_chilensis.jpg", "autor": "Javier Rubilar", "lic": "CC BY-SA 2.0", "url": "https://commons.wikimedia.org/wiki/File:Genypterus_chilensis.jpg", "fuente": "Wikimedia Commons"}};
 
 /* ---------- Escalas de color ---------- */
 const ESC_VIENTO = [[0,'#3D6DB5'],[8,'#2C9AB7'],[15,'#2FB77A'],[22,'#8CC63F'],[30,'#E2C33B'],[40,'#E8892F'],[50,'#D9442E'],[65,'#A42A73']];
@@ -423,7 +476,7 @@ const S = {
   lugar: store.get('lugar', 'valparaiso'),
   modo: store.get('modo', 'orilla'),
   mes: (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })(),
-  sel: hoyClave, datos: null, mareas: [], estado: '', aviso: false, vista: 'hoy', multi: null
+  sel: hoyClave, datos: null, mareas: [], estado: '', aviso: false, vista: 'mapa', multi: null, zonaMapa: null
 };
 const lugarActual = () => LUGARES.find(l => l.id === S.lugar) || LUGARES[5];
 const ctxActual = () => ({ lugar: lugarActual(), datos: S.datos, mareas: S.mareas });
@@ -433,10 +486,10 @@ async function pedir(url) { const r = await fetch(url); if (!r.ok) throw new Err
 const VAR_CLIMA = 'temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,cloud_cover,precipitation';
 const VAR_MAR = 'wave_height,wave_period,swell_wave_height,sea_surface_temperature,sea_level_height_msl';
 function urls(ls) {
-  const la = ls.map(l => l.lat).join(','), lo = ls.map(l => l.lng).join(','), lom = ls.map(l => (l.lng - 0.04).toFixed(3)).join(',');
+  const la = ls.map(l => l.lat).join(','), lo = ls.map(l => l.lng).join(','), lam = ls.map(l => l.mar ? l.mar[0] : l.lat).join(','), lom = ls.map(l => (l.mar ? l.mar[1] : l.lng - 0.04).toFixed(3)).join(',');
   return {
     clima: `https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&timezone=America%2FSantiago&hourly=${VAR_CLIMA}&forecast_days=16&wind_speed_unit=kmh`,
-    mar: `https://marine-api.open-meteo.com/v1/marine?latitude=${la}&longitude=${lom}&timezone=America%2FSantiago&hourly=${VAR_MAR}&forecast_days=8`
+    mar: `https://marine-api.open-meteo.com/v1/marine?latitude=${lam}&longitude=${lom}&timezone=America%2FSantiago&hourly=${VAR_MAR}&forecast_days=8`
   };
 }
 function combinar(clima, mar) {
@@ -479,16 +532,18 @@ async function cargar() {
   }
   render();
 }
-async function cargarMulti() {
-  if (S.multi && Date.now() - S.multi.t < 3600e3) return;
+async function cargarMulti(zona) {
+  S.multi = S.multi || {};
+  if (S.multi[zona] && Date.now() - S.multi[zona].t < 3600e3) return;
+  const ls = LUGARES.filter(l => l.zona === zona);
   try {
-    const u = urls(LUGARES);
+    const u = urls(ls);
     const [c, m] = await Promise.all([pedir(u.clima), pedir(u.mar).catch(() => null)]);
     const cs = Array.isArray(c) ? c : [c], ms = m ? (Array.isArray(m) ? m : [m]) : [];
     const porLugar = {};
-    LUGARES.forEach((l, i) => { const d = combinar(cs[i], ms[i]); porLugar[l.id] = { datos: d, mareas: mareas(d) }; });
-    S.multi = { t: Date.now(), porLugar };
-  } catch (e) { S.multi = null; }
+    ls.forEach((l, i) => { const d = combinar(cs[i], ms[i]); porLugar[l.id] = { datos: d, mareas: mareas(d) }; });
+    S.multi[zona] = { t: Date.now(), porLugar };
+  } catch (e) { delete S.multi[zona]; }
 }
 
 /* ---------- Puntaje ---------- */
@@ -721,7 +776,7 @@ function renderEspDia(d) {
     .sort((p, q) => q.ok - p.ok).slice(0, 4);
   const col = ok => ok === 2 ? '#2FD3A6' : ok === 1 ? '#8CC63F' : '#E2C33B';
   $('#p-especies').innerHTML = `<h3>Qué buscar desde ${MODOS[S.modo].nombre}<small>temporada de ${new Intl.DateTimeFormat('es-CL', { month: 'long' }).format(d.fecha)}</small></h3>
-    ${lista.length ? `<ul class="esp-lista">${lista.map(({ e, ok }) => `<li><span class="ok" style="background:${col(ok)}"></span><div><b>${e.nombre}</b><span>${e.cuando} ${e.carnada}</span></div></li>`).join('')}</ul>` : '<p class="nota">No hay especies en temporada para esta modalidad.</p>'}`;
+    ${lista.length ? `<ul class="esp-lista">${lista.map(({ e, ok }) => `<li>${FOTOS[e.nombre] ? `<img src="${FOTOS[e.nombre].src}" alt="" loading="lazy">` : ''}<span class="ok" style="background:${col(ok)}"></span><div><b>${e.nombre}</b><span>${e.cuando} ${e.carnada}</span></div></li>`).join('')}</ul>` : '<p class="nota">No hay especies en temporada para esta modalidad.</p>'}`;
 }
 
 /* ---------- Render: calendario ---------- */
@@ -754,13 +809,15 @@ function puntajeLugar(l) {
   const f = deClave(S.sel);
   let ctx;
   if (l.id === S.lugar) ctx = ctxActual();
-  else if (S.multi && S.multi.porLugar[l.id]) ctx = { lugar: l, ...S.multi.porLugar[l.id] };
+  else if (S.multi && S.multi[l.zona] && S.multi[l.zona].porLugar[l.id]) ctx = { lugar: l, ...S.multi[l.zona].porLugar[l.id] };
   else ctx = { lugar: l, datos: null, mareas: [] };
   return analizarDia(f, ctx);
 }
 async function renderMapa() {
   $('#mapa-tit').textContent = `Índice desde ${MODOS[S.modo].nombre}, ${claveDia(deClave(S.sel)) === hoyClave ? 'hoy' : fmtLargo.format(deClave(S.sel))}. Toca un punto para ver su pronóstico.`;
-  const res = LUGARES.map(l => ({ l, d: puntajeLugar(l) }));
+  const zona = S.zonaMapa;
+  $('#zonas').innerHTML = ZONAS.map(z => `<button type="button" data-zona="${z.id}" aria-pressed="${z.id === zona}">${z.nombre}</button>`).join('');
+  const res = LUGARES.filter(l => l.zona === zona).map(l => ({ l, d: puntajeLugar(l) }));
   $('#spots').innerHTML = [...res].sort((p, q) => q.d.pts - p.d.pts).map(({ l, d }) => {
     const c = color(ESC_PTS, d.pts);
     return `<li><button type="button" data-lugar="${l.id}"><span class="bola" style="background:${c};color:${oscuro(c) ? '#fff' : '#0B1620'}">${d.pts}</span><span><b>${l.nombre}</b><small>${d.peligro ? 'No salir' : veredicto(d.pts)}${d.estimado ? ', solo luna' : ''}</small></span><span class="v">${d.olaMax != null ? dec1(d.olaMax) + ' m' : ''}${d.vientoMax != null ? '<br>' + Math.round(d.vientoMax) + ' km/h' : ''}</span></button></li>`;
@@ -769,12 +826,17 @@ async function renderMapa() {
   const L = window.L;
   if (!mapa) {
     mapa = L.map('mapa', { zoomControl: false, attributionControl: true, zoomSnap: 0.25 });
-    mapa.fitBounds(LUGARES.map(l => [l.lat, l.lng]), { paddingTopLeft: [170, 24], paddingBottomRight: [24, 24] });
     mapa.on('move zoom resize', dibujarEtiquetas);
     const esri = 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/';
     L.tileLayer(esri + 'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, attribution: 'Mapa base © Esri' }).addTo(mapa);
     L.tileLayer(esri + 'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16 }).addTo(mapa);
     L.control.zoom({ position: 'bottomright' }).addTo(mapa);
+  }
+  if (S.zonaAjustada !== zona) {
+    S.zonaAjustada = zona;
+    const pts = res.map(({ l }) => [l.lat, l.lng]);
+    if (pts.length === 1) mapa.setView(pts[0], 11);
+    else mapa.fitBounds(pts, { paddingTopLeft: [170, 30], paddingBottomRight: [30, 30], maxZoom: 11 });
   }
   setTimeout(() => { mapa.invalidateSize(); dibujarEtiquetas(); }, 60);
   if (capa) capa.remove();
@@ -808,7 +870,8 @@ function dibujarEtiquetas() {
   const min0 = ALTO / 2 + 6, max0 = Hc - ALTO / 2 - 6, n = items.length;
   let ys = items.map(o => o.p.y);
   for (let i = 1; i < n; i++) ys[i] = Math.max(ys[i], ys[i - 1] + ALTO);
-  if (n > 1 && (ys[n - 1] > max0 || n * ALTO > (max0 - min0) * .55)) {
+  if (ys[n - 1] > max0) { ys[n - 1] = max0; for (let i = n - 2; i >= 0; i--) ys[i] = Math.min(ys[i], ys[i + 1] - ALTO); }
+  if (n > 1 && ys[0] < min0) {
     // Muchos puntos: repartir parejo en toda la altura, conservando el orden norte-sur
     const paso = Math.min(40, Math.max(ALTO, (max0 - min0) / (n - 1))), total = (n - 1) * paso;
     const centro = (items[0].p.y + items[n - 1].p.y) / 2;
@@ -830,9 +893,9 @@ const MESES = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 function renderEspecies() {
   const mesAct = new Date().getMonth() + 1, lista = ESPECIES.filter(e => e.modos.includes(S.modo));
   $('#esp-intro').textContent = `${lista.length} especies que se pescan desde ${MODOS[S.modo].nombre}. Cambia la modalidad arriba para ver las demás.`;
-  $('#fichas').innerHTML = lista.map(e => `<article class="ficha"><h3>${e.nombre}</h3><p class="cient">${e.cient}</p>
+  $('#fichas').innerHTML = lista.map(e => { const f = FOTOS[e.nombre]; return `<article class="ficha">${f ? `<figure><img src="${f.src}" alt="${e.nombre} (${e.cient})" loading="lazy" decoding="async"><figcaption>Foto: ${f.autor}, ${f.lic}, <a href="${f.url}" target="_blank" rel="noopener">${f.fuente}</a></figcaption></figure>` : ''}<h3>${e.nombre}</h3><p class="cient">${e.cient}</p>
     <dl><dt>Cuándo</dt><dd>${e.cuando}</dd><dt>Carnada</dt><dd>${e.carnada}</dd><dt>Cómo</dt><dd>${e.tecnica}</dd></dl>
-    <div class="meses" aria-label="Mejor época">${MESES.map((m, i) => `<span class="${e.meses.includes(i + 1) ? 'si' : ''}${i + 1 === mesAct ? ' ahora' : ''}">${m}</span>`).join('')}</div></article>`).join('');
+    <div class="meses" aria-label="Mejor época">${MESES.map((m, i) => `<span class="${e.meses.includes(i + 1) ? 'si' : ''}${i + 1 === mesAct ? ' ahora' : ''}">${m}</span>`).join('')}</div></article>`; }).join('');
 }
 
 /* ---------- General ---------- */
@@ -847,21 +910,23 @@ function render() {
 }
 function elegirLugar(id, irHoy) {
   S.lugar = id; store.set('lugar', id); $('#lugar').value = id; astroCache.clear();
+  S.zonaMapa = lugarActual().zona; store.set('zonaMapa', S.zonaMapa);
   if (irHoy) location.hash = '#hoy';
   cargar();
 }
 function ruta() {
-  const v = ['hoy', 'calendario', 'mapa', 'especies'].find(n => location.hash === '#' + n) || 'hoy';
+  const v = ['hoy', 'calendario', 'mapa', 'especies'].find(n => location.hash === '#' + n) || 'mapa';
   S.vista = v;
   document.querySelectorAll('.vista').forEach(s => s.classList.toggle('activa', s.id === 'v-' + v));
   document.querySelectorAll('.tabs a').forEach(a => a.removeAttribute('aria-current'));
   $('#t-' + v).setAttribute('aria-current', 'page');
   window.scrollTo(0, 0);
-  if (v === 'mapa') { renderMapa(); cargarMulti().then(() => { if (S.vista === 'mapa') renderMapa(); }); }
+  if (v === 'mapa') { renderMapa(); cargarMulti(S.zonaMapa).then(() => { if (S.vista === 'mapa') renderMapa(); }); }
 }
 function init() {
+  S.zonaMapa = store.get('zonaMapa', null) || lugarActual().zona;
   const sel = $('#lugar');
-  sel.innerHTML = LUGARES.map(l => `<option value="${l.id}">${l.nombre}</option>`).join('');
+  sel.innerHTML = ZONAS.map(z => `<optgroup label="${z.nombre}">${LUGARES.filter(l => l.zona === z.id).map(l => `<option value="${l.id}">${l.nombre}</option>`).join('')}</optgroup>`).join('');
   sel.value = lugarActual().id;
   sel.addEventListener('change', () => elegirLugar(sel.value, false));
   $('#modos').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.modo = b.dataset.modo; store.set('modo', S.modo); render(); });
@@ -869,6 +934,7 @@ function init() {
   $('#mes-ant').addEventListener('click', () => { S.mes = new Date(S.mes.getFullYear(), S.mes.getMonth() - 1, 1); renderMes(); });
   $('#mes-sig').addEventListener('click', () => { S.mes = new Date(S.mes.getFullYear(), S.mes.getMonth() + 1, 1); renderMes(); });
   $('#grilla').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; S.sel = b.dataset.k; location.hash = '#hoy'; render(); });
+  $('#zonas').addEventListener('click', e => { const b = e.target.closest('[data-zona]'); if (!b) return; S.zonaMapa = b.dataset.zona; store.set('zonaMapa', S.zonaMapa); renderMapa(); cargarMulti(S.zonaMapa).then(() => { if (S.vista === 'mapa') renderMapa(); }); });
   $('#spots').addEventListener('click', e => { const b = e.target.closest('[data-lugar]'); if (b) elegirLugar(b.dataset.lugar, true); });
   window.addEventListener('hashchange', ruta);
   ruta(); cargar();

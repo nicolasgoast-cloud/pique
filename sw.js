@@ -1,5 +1,5 @@
 // Pique: guarda la app para usarla sin señal. El pronóstico se guarda aparte, en la propia app.
-const VERSION = 'pique-v3';
+const VERSION = 'pique-v4';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -12,7 +12,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET') return;
   if (url.hostname.endsWith('open-meteo.com')) return; // siempre a la red; la app guarda la última respuesta
-  const esFuente = url.hostname.includes('fonts.g') || url.hostname === 'cdnjs.cloudflare.com';
+  const esFuente = url.hostname.includes('fonts.g') || url.hostname === 'cdnjs.cloudflare.com' || url.hostname === 'upload.wikimedia.org' || url.hostname === 'inaturalist-open-data.s3.amazonaws.com';
   if (url.origin === location.origin || esFuente) {
     // Red primero para la página (así llegan las actualizaciones), caché si no hay señal
     e.respondWith(
