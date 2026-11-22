@@ -167,6 +167,33 @@ button,select{font:inherit;color:inherit}
 
 /* Mapa */
 #mapa{height:min(58vh,560px);border-radius:16px;overflow:hidden;border:1px solid var(--linea);background:#0A141C}
+.mapa-wrap{position:relative}
+.fondos{position:absolute;top:10px;right:10px;z-index:700;display:flex;background:rgba(19,35,47,.92);border:1px solid var(--linea);border-radius:10px;padding:3px;gap:2px}
+.fondos button{border:0;background:none;color:var(--suave);font-size:12px;font-weight:600;padding:5px 9px;border-radius:7px;cursor:pointer}
+.fondos button[aria-pressed="true"]{background:var(--acento);color:#0B1620}
+#mapa[data-fondo="mar"] .leaflet-tile-pane{filter:saturate(.9)}
+.leaflet-tile-container img{width:256.5px!important;height:256.5px!important}
+.marca-temp{width:22px;height:22px;border-radius:50%;border:3px solid #fff;background:rgba(47,211,166,.55);box-shadow:0 0 0 4px rgba(47,211,166,.35),0 2px 8px rgba(0,0,0,.5)}
+.punto-box{position:absolute;left:8px;right:8px;bottom:8px;z-index:1100;background:rgba(19,35,47,.97);border:1px solid var(--linea);border-radius:14px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.45);max-height:calc(100% - 60px);overflow:auto}
+.punto-box[hidden]{display:none}
+.pt-cab{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.pt-cab b{display:block;font-size:15px}
+.pt-cab small{display:block;font-size:12px;color:var(--suave)}
+.pt-cerrar{border:0;background:var(--panel-2);color:var(--suave);width:28px;height:28px;border-radius:8px;cursor:pointer;flex:0 0 28px}
+.pt-cuerpo{display:flex;gap:12px;align-items:center;margin-top:8px}
+.bola.grande{width:46px;height:46px;flex:0 0 46px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-stretch:85%;font-size:21px}
+.pt-datos{display:grid;gap:1px;font-size:12.5px;line-height:1.35;color:var(--suave);min-width:0}
+.pt-datos b{color:var(--texto);font-size:14.5px}
+.pt-guardar{display:flex;gap:6px;margin-top:10px}
+.pt-guardar input{flex:1;min-width:0;background:var(--panel-2);border:1px solid var(--linea);border-radius:10px;padding:9px 10px;color:var(--texto);font:inherit;font-size:16px}
+.pt-acciones{display:flex;gap:8px;margin-top:10px}
+.pt-guardar button,.pt-ver,.pt-sec{border:0;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;font-size:14px}
+.pt-sec{flex:1;background:var(--panel-2);color:var(--texto);border:1px solid var(--linea)!important}
+.pt-guardar .pt-ok{background:var(--acento);color:#0B1620}
+.pt-ver{flex:1.3;background:var(--acento);color:#0B1620}
+.spots li.mio{display:flex;gap:6px}
+.spots li.mio>button:first-child{flex:1}
+.spots .quitar{width:auto!important;display:block!important;flex:0 0 auto;padding:0 12px!important;color:var(--suave);font-size:12.5px;text-align:center!important}
 .leaflet-container{font-family:var(--f)!important;background:#0A141C!important}
 .leaflet-bar a{background:var(--panel-2)!important;color:var(--texto)!important;border-color:var(--linea)!important}
 .leaflet-control-attribution{background:rgba(12,24,34,.75)!important;color:var(--tenue)!important;font-size:10px!important}
@@ -273,7 +300,7 @@ button,select{font:inherit;color:inherit}
   <section class="vista" id="v-mapa" aria-label="Mapa de puntos de pesca">
     <div class="zonas" id="zonas" role="group" aria-label="Zona de la costa"></div>
     <p class="mapa-tit" id="mapa-tit"></p>
-    <div id="mapa"></div>
+    <div class="mapa-wrap"><div id="mapa"></div><div class="punto-box" id="punto" hidden aria-live="polite"></div></div>
     <ul class="spots" id="spots"></ul>
   </section>
 
@@ -468,7 +495,7 @@ const fmtSem = new Intl.DateTimeFormat('es-CL', { weekday: 'short' });
 const mayus = s => s.charAt(0).toUpperCase() + s.slice(1);
 const dec1 = v => v.toFixed(1).replace('.', ',');
 const parseLocal = s => { const [f, h] = s.split('T'); const [y, m, d] = f.split('-').map(Number); const [hh, mm] = h.split(':').map(Number); return new Date(y, m - 1, d, hh, mm).getTime(); };
-const dms = (v, pos, neg) => { const a = Math.abs(v), g = Math.floor(a), m = Math.floor((a - g) * 60), s = Math.round(((a - g) * 60 - m) * 60); return `${g}°${pad(m)}'${pad(s)}"${v < 0 ? neg : pos}`; };
+const dms = (v, pos, neg) => { const t = Math.round(Math.abs(v) * 3600), g = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60; return `${g}°${pad(m)}'${pad(s)}"${v < 0 ? neg : pos}`; };
 
 /* ---------- Estado ---------- */
 const hoyClave = claveDia(new Date());
@@ -478,7 +505,12 @@ const S = {
   mes: (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })(),
   sel: hoyClave, datos: null, mareas: [], estado: '', aviso: false, vista: 'mapa', multi: null, zonaMapa: null
 };
-const lugarActual = () => LUGARES.find(l => l.id === S.lugar) || LUGARES[5];
+const misPuntos = () => store.get('misPuntos', []);
+let puntoTemp = store.get('puntoTemp', null);
+const todosLugares = () => [...LUGARES, ...misPuntos(), ...(puntoTemp ? [puntoTemp] : [])];
+const lugarActual = () => todosLugares().find(l => l.id === S.lugar) || LUGARES.find(l => l.id === 'valparaiso');
+const distKm = (a, b) => { const R = 6371, dLat = (b.lat - a.lat) * Math.PI / 180, dLng = (b.lng - a.lng) * Math.PI / 180; const x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); };
+const masCercano = p => LUGARES.reduce((m, l) => { const d = distKm(p, l); return d < m.d ? { l, d } : m; }, { l: null, d: Infinity });
 const ctxActual = () => ({ lugar: lugarActual(), datos: S.datos, mareas: S.mareas });
 
 /* ---------- Datos (Open-Meteo) ---------- */
@@ -810,27 +842,33 @@ function puntajeLugar(l) {
   let ctx;
   if (l.id === S.lugar) ctx = ctxActual();
   else if (S.multi && S.multi[l.zona] && S.multi[l.zona].porLugar[l.id]) ctx = { lugar: l, ...S.multi[l.zona].porLugar[l.id] };
+  else if (l.mio) { const g = store.get('datos.' + l.id, null); ctx = { lugar: l, datos: g, mareas: mareas(g) }; }
   else ctx = { lugar: l, datos: null, mareas: [] };
   return analizarDia(f, ctx);
 }
 async function renderMapa() {
-  $('#mapa-tit').textContent = `Índice desde ${MODOS[S.modo].nombre}, ${claveDia(deClave(S.sel)) === hoyClave ? 'hoy' : fmtLargo.format(deClave(S.sel))}. Toca un punto para ver su pronóstico.`;
+  $('#mapa-tit').textContent = `Índice desde ${MODOS[S.modo].nombre}, ${claveDia(deClave(S.sel)) === hoyClave ? 'hoy' : fmtLargo.format(deClave(S.sel))}. Toca cualquier lugar de la costa para ver sus condiciones, o un globo para su pronóstico completo.`;
   const zona = S.zonaMapa;
   $('#zonas').innerHTML = ZONAS.map(z => `<button type="button" data-zona="${z.id}" aria-pressed="${z.id === zona}">${z.nombre}</button>`).join('');
-  const res = LUGARES.filter(l => l.zona === zona).map(l => ({ l, d: puntajeLugar(l) }));
+  const res = [...LUGARES, ...misPuntos()].filter(l => l.zona === zona).map(l => ({ l, d: puntajeLugar(l) }));
   $('#spots').innerHTML = [...res].sort((p, q) => q.d.pts - p.d.pts).map(({ l, d }) => {
     const c = color(ESC_PTS, d.pts);
+    if (l.mio) return `<li class="mio"><button type="button" data-lugar="${l.id}"><span class="bola" style="background:${c};color:${oscuro(c) ? '#fff' : '#0B1620'}">${d.pts}</span><span><b>★ ${l.nombre}</b><small>${d.estimado ? 'Abre el pronóstico para cargar sus datos' : (d.peligro ? 'No salir' : veredicto(d.pts))}</small></span><span class="v">${d.olaMax != null ? dec1(d.olaMax) + ' m' : ''}${d.vientoMax != null ? '<br>' + Math.round(d.vientoMax) + ' km/h' : ''}</span></button><button type="button" class="quitar" data-quitar="${l.id}" aria-label="Quitar ${l.nombre} de mis puntos">Quitar</button></li>`;
     return `<li><button type="button" data-lugar="${l.id}"><span class="bola" style="background:${c};color:${oscuro(c) ? '#fff' : '#0B1620'}">${d.pts}</span><span><b>${l.nombre}</b><small>${d.peligro ? 'No salir' : veredicto(d.pts)}${d.estimado ? ', solo luna' : ''}</small></span><span class="v">${d.olaMax != null ? dec1(d.olaMax) + ' m' : ''}${d.vientoMax != null ? '<br>' + Math.round(d.vientoMax) + ' km/h' : ''}</span></button></li>`;
   }).join('');
   try { await cargarLeaflet(); } catch (e) { leafletListo = null; $('#mapa').innerHTML = '<p class="nota" style="padding:16px">El mapa necesita conexión a internet.</p>'; return; }
   const L = window.L;
   if (!mapa) {
-    mapa = L.map('mapa', { zoomControl: false, attributionControl: true, zoomSnap: 0.25 });
+    mapa = L.map('mapa', { zoomControl: false, attributionControl: true, zoomSnap: 1 });
     mapa.on('move zoom resize', dibujarEtiquetas);
-    const esri = 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/';
-    L.tileLayer(esri + 'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, attribution: 'Mapa base © Esri' }).addTo(mapa);
-    L.tileLayer(esri + 'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16 }).addTo(mapa);
+    mapa.on('click', e => marcarPunto(e.latlng));
     L.control.zoom({ position: 'bottomright' }).addTo(mapa);
+    ponerFondo(store.get('fondo', 'mar'));
+    const ctrl = document.createElement('div'); ctrl.className = 'fondos'; ctrl.setAttribute('role', 'group'); ctrl.setAttribute('aria-label', 'Fondo del mapa');
+    ctrl.innerHTML = [['mar', 'Mar'], ['satelite', 'Satélite'], ['oscuro', 'Oscuro']].map(([k, t]) => `<button type="button" data-fondo="${k}">${t}</button>`).join('');
+    mapa.getContainer().appendChild(ctrl); L.DomEvent.disableClickPropagation(ctrl);
+    ctrl.addEventListener('click', e => { const b = e.target.closest('[data-fondo]'); if (b) ponerFondo(b.dataset.fondo); });
+    marcarBotonesFondo();
   }
   if (S.zonaAjustada !== zona) {
     S.zonaAjustada = zona;
@@ -848,6 +886,98 @@ async function renderMapa() {
   S.resMapa = res;
   dibujarEtiquetas();
 }
+/* Fondos del mapa (Esri) */
+let capaFondo = null;
+const FONDOS = {
+  mar: [['Ocean/World_Ocean_Base', 13], ['Ocean/World_Ocean_Reference', 13]],
+  satelite: [['World_Imagery', 19], ['Reference/World_Boundaries_and_Places', 19]],
+  oscuro: [['Canvas/World_Dark_Gray_Base', 16], ['Canvas/World_Dark_Gray_Reference', 16]]
+};
+function ponerFondo(k) {
+  if (!FONDOS[k]) k = 'mar';
+  store.set('fondo', k);
+  if (capaFondo) capaFondo.remove();
+  capaFondo = L.layerGroup(FONDOS[k].map(([ruta, nat], i) => L.tileLayer(`https://services.arcgisonline.com/ArcGIS/rest/services/${ruta}/MapServer/tile/{z}/{y}/{x}`, { maxNativeZoom: nat, maxZoom: 18, attribution: i ? '' : 'Mapa base © Esri' }))).addTo(mapa);
+  capaFondo.eachLayer(l => l.bringToBack());
+  mapa.getContainer().dataset.fondo = k;
+  marcarBotonesFondo();
+}
+function marcarBotonesFondo() { const k = store.get('fondo', 'mar'); document.querySelectorAll('.fondos [data-fondo]').forEach(b => b.setAttribute('aria-pressed', b.dataset.fondo === k)); }
+
+/* Tocar el mapa: condiciones del punto exacto */
+let marcaTemp = null, puntoVista = null;
+async function marcarPunto(ll) {
+  const lat = +ll.lat.toFixed(4), lng = +ll.lng.toFixed(4);
+  const cerca = masCercano({ lat, lng });
+  const p = { id: `p${lat}_${lng}`, nombre: 'Punto marcado', lat, lng, zona: cerca.l.zona, temp: true };
+  puntoVista = { p, cerca, cargando: true };
+  if (marcaTemp) marcaTemp.remove();
+  marcaTemp = L.marker([lat, lng], { icon: L.divIcon({ className: '', iconSize: [22, 22], iconAnchor: [11, 11], html: '<div class="marca-temp"></div>' }), interactive: false }).addTo(mapa);
+  renderPunto();
+  try {
+    let u = urls([p]);
+    let [clima, mar] = await Promise.all([pedir(u.clima), pedir(u.mar).catch(() => null)]);
+    const sinOlas = m => !m || !m.hourly || !(m.hourly.wave_height || []).some(v => v != null);
+    if (sinOlas(mar)) { p.mar = [lat, +(lng - 0.04).toFixed(4)]; u = urls([p]); mar = await pedir(u.mar).catch(() => null); if (sinOlas(mar)) { p.mar = [lat, +(lng - 0.1).toFixed(4)]; u = urls([p]); mar = await pedir(u.mar).catch(() => null); } }
+    if (puntoVista.p !== p) return;
+    const datos = combinar(clima, mar);
+    puntoVista = { p, cerca, datos, mareas: mareas(datos) };
+  } catch (e) {
+    if (puntoVista.p !== p) return;
+    puntoVista = { p, cerca, error: true };
+  }
+  renderPunto();
+}
+function renderPunto() {
+  const box = $('#punto');
+  if (!puntoVista) { box.hidden = true; return; }
+  box.hidden = false;
+  const { p, cerca } = puntoVista;
+  const cab = `<div class="pt-cab"><div><b>Punto marcado</b><small>A ${cerca.d < 10 ? dec1(cerca.d) : Math.round(cerca.d)} km de ${cerca.l.corto || cerca.l.nombre}</small></div><button type="button" class="pt-cerrar" data-pt="cerrar" aria-label="Cerrar">✕</button></div>`;
+  if (puntoVista.cargando) { box.innerHTML = cab + '<p class="nota">Buscando el pronóstico de este punto…</p>'; return; }
+  if (puntoVista.error) { box.innerHTML = cab + '<p class="nota">No se pudo cargar el pronóstico. Revisa tu conexión y vuelve a tocar el mapa.</p>'; return; }
+  const d = analizarDia(deClave(S.sel), { lugar: p, datos: puntoVista.datos, mareas: puntoVista.mareas });
+  const c = color(ESC_PTS, d.pts), a = d.a;
+  const mar = puntoVista.mareas.filter(m => m.t >= a.t0 && m.t < a.t0 + 24 * H).map(m => `${m.tipo === 'Pleamar' ? '▲' : '▼'} ${hhmm(m.t)}`).join('  ');
+  box.innerHTML = cab + `
+    <div class="pt-cuerpo">
+      <span class="bola grande" style="background:${c};color:${oscuro(c) ? '#fff' : '#0B1620'}">${d.pts}</span>
+      <div class="pt-datos">
+        <b>${d.peligro ? 'No salir' : veredicto(d.pts)} desde ${MODOS[S.modo].nombre}</b>
+        <span>${d.olaMax != null ? `Olas hasta ${dec1(d.olaMax)} m` : 'Sin datos de oleaje aquí'}${d.vientoMax != null ? `, viento ${Math.round(d.vientoMax)} km/h` : ''}</span>
+        <span>Mejores horas ${d.ventanas.map(textoVentana).join(' y ')}</span>
+        ${mar ? `<span>${mar}</span>` : ''}
+      </div>
+    </div>
+    ${puntoVista.guardando ? `<form class="pt-guardar" data-pt="form">
+      <label class="sr" for="pt-nombre">Nombre del punto</label>
+      <input id="pt-nombre" type="text" maxlength="40" placeholder="Ej. Playa Negra Concón" autocomplete="off">
+      <button type="submit" class="pt-ok">Guardar</button>
+    </form>` : `<div class="pt-acciones"><button type="button" class="pt-ver" data-pt="ver">Ver pronóstico</button><button type="button" class="pt-sec" data-pt="guardar">Guardar punto</button></div>`}`;
+  if (puntoVista.guardando) { const i = $('#pt-nombre'); if (i) i.focus(); }
+}
+function verPunto() {
+  const { p, datos } = puntoVista;
+  puntoTemp = { ...p }; store.set('puntoTemp', puntoTemp);
+  store.set('datos.' + p.id, datos);
+  llenarSelector(); elegirLugar(p.id, true);
+}
+function guardarPunto(nombre) {
+  const { p, datos } = puntoVista;
+  const nuevo = { id: 'm' + Date.now().toString(36), nombre: nombre || `Punto cerca de ${puntoVista.cerca.l.nombre}`, lat: p.lat, lng: p.lng, zona: p.zona, mio: true };
+  if (p.mar) nuevo.mar = p.mar;
+  store.set('misPuntos', [...misPuntos(), nuevo]);
+  store.set('datos.' + nuevo.id, datos);
+  puntoVista = null; if (marcaTemp) { marcaTemp.remove(); marcaTemp = null; }
+  llenarSelector(); renderPunto(); renderMapa();
+  S.estado = `Guardado "${nuevo.nombre}" en Mis puntos.`; S.aviso = false; $('#estado').textContent = S.estado;
+}
+function quitarPunto(id) {
+  store.set('misPuntos', misPuntos().filter(l => l.id !== id));
+  if (S.lugar === id) elegirLugar('valparaiso', false);
+  llenarSelector(); renderMapa();
+}
+
 /* Etiquetas tiradas al mar, con línea hacia cada punto */
 function dibujarEtiquetas() {
   if (!mapa || !S.resMapa) return;
@@ -883,7 +1013,7 @@ function dibujarEtiquetas() {
     const c = color(ESC_PTS, o.d.pts), y = ys[i], xEt = Math.max(4, xDer - ANCHO);
     lineas += `<path d="M${xDer} ${y} L${xDer + 10} ${y} L${o.p.x - 5} ${o.p.y}" fill="none" stroke="${c}" stroke-width="1.4" stroke-opacity=".85"/>`;
     etiquetas += `<button type="button" class="et${o.l.id === S.lugar ? ' sel' : ''}" data-lugar="${o.l.id}" style="right:${W - xDer}px;top:${y}px" aria-label="${o.l.nombre}: ${o.d.pts} de 100">
-      <b style="background:${c};color:${oscuro(c) ? '#fff' : '#0B1620'}">${o.d.pts}</b>${o.l.corto || o.l.nombre}</button>`;
+      <b style="background:${c};color:${oscuro(c) ? '#fff' : '#0B1620'}">${o.d.pts}</b>${o.l.mio ? '★ ' : ''}${o.l.corto || o.l.nombre}</button>`;
   });
   capaEt.innerHTML = `<svg aria-hidden="true">${lineas}</svg>${etiquetas}`;
 }
@@ -908,6 +1038,15 @@ function render() {
   renderMes(); renderEspecies();
   if (S.vista === 'mapa') renderMapa();
 }
+function llenarSelector() {
+  const sel = $('#lugar'), mios = misPuntos();
+  let html = '';
+  if (puntoTemp) html += `<optgroup label="Punto marcado"><option value="${puntoTemp.id}">${puntoTemp.nombre}</option></optgroup>`;
+  if (mios.length) html += `<optgroup label="Mis puntos">${mios.map(l => `<option value="${l.id}">${l.nombre}</option>`).join('')}</optgroup>`;
+  html += ZONAS.map(z => `<optgroup label="${z.nombre}">${LUGARES.filter(l => l.zona === z.id).map(l => `<option value="${l.id}">${l.nombre}</option>`).join('')}</optgroup>`).join('');
+  sel.innerHTML = html;
+  sel.value = lugarActual().id;
+}
 function elegirLugar(id, irHoy) {
   S.lugar = id; store.set('lugar', id); $('#lugar').value = id; astroCache.clear();
   S.zonaMapa = lugarActual().zona; store.set('zonaMapa', S.zonaMapa);
@@ -926,8 +1065,7 @@ function ruta() {
 function init() {
   S.zonaMapa = store.get('zonaMapa', null) || lugarActual().zona;
   const sel = $('#lugar');
-  sel.innerHTML = ZONAS.map(z => `<optgroup label="${z.nombre}">${LUGARES.filter(l => l.zona === z.id).map(l => `<option value="${l.id}">${l.nombre}</option>`).join('')}</optgroup>`).join('');
-  sel.value = lugarActual().id;
+  llenarSelector();
   sel.addEventListener('change', () => elegirLugar(sel.value, false));
   $('#modos').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.modo = b.dataset.modo; store.set('modo', S.modo); render(); });
   $('#dias').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; S.sel = b.dataset.k; render(); });
@@ -935,7 +1073,9 @@ function init() {
   $('#mes-sig').addEventListener('click', () => { S.mes = new Date(S.mes.getFullYear(), S.mes.getMonth() + 1, 1); renderMes(); });
   $('#grilla').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; S.sel = b.dataset.k; location.hash = '#hoy'; render(); });
   $('#zonas').addEventListener('click', e => { const b = e.target.closest('[data-zona]'); if (!b) return; S.zonaMapa = b.dataset.zona; store.set('zonaMapa', S.zonaMapa); renderMapa(); cargarMulti(S.zonaMapa).then(() => { if (S.vista === 'mapa') renderMapa(); }); });
-  $('#spots').addEventListener('click', e => { const b = e.target.closest('[data-lugar]'); if (b) elegirLugar(b.dataset.lugar, true); });
+  $('#spots').addEventListener('click', e => { const q = e.target.closest('[data-quitar]'); if (q) { quitarPunto(q.dataset.quitar); return; } const b = e.target.closest('[data-lugar]'); if (b) elegirLugar(b.dataset.lugar, true); });
+  $('#punto').addEventListener('click', e => { const b = e.target.closest('[data-pt]'); if (!b) return; if (b.dataset.pt === 'cerrar') { puntoVista = null; if (marcaTemp) { marcaTemp.remove(); marcaTemp = null; } renderPunto(); } if (b.dataset.pt === 'ver') verPunto(); if (b.dataset.pt === 'guardar') { puntoVista.guardando = true; renderPunto(); } });
+  $('#punto').addEventListener('submit', e => { e.preventDefault(); guardarPunto($('#pt-nombre').value.trim()); });
   window.addEventListener('hashchange', ruta);
   ruta(); cargar();
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
