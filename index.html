@@ -999,7 +999,7 @@ function dibujarEtiquetas() {
   const minX = Math.min(...items.map(o => o.p.x));
   const xDer = Math.max(ANCHO + 6, minX - 34);
   // Repartir en vertical sin traslape
-  const min0 = ALTO / 2 + 6, max0 = Hc - ALTO / 2 - 6, n = items.length;
+  const min0 = ALTO / 2 + 50, max0 = Hc - ALTO / 2 - 6, n = items.length;
   let ys = items.map(o => o.p.y);
   for (let i = 1; i < n; i++) ys[i] = Math.max(ys[i], ys[i - 1] + ALTO);
   if (ys[n - 1] > max0) { ys[n - 1] = max0; for (let i = n - 2; i >= 0; i--) ys[i] = Math.min(ys[i], ys[i + 1] - ALTO); }
