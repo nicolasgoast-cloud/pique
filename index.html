@@ -166,7 +166,7 @@ button,select{font:inherit;color:inherit}
 .cal-ley .rayado{display:inline-block;width:16px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px;background:repeating-linear-gradient(135deg,rgba(141,163,179,.5) 0 2px,transparent 2px 5px)}
 
 /* Mapa */
-#mapa{height:min(62vh,560px);border-radius:16px;overflow:hidden;border:1px solid var(--linea);background:#0A141C}
+#mapa{height:min(58vh,560px);border-radius:16px;overflow:hidden;border:1px solid var(--linea);background:#0A141C}
 .leaflet-container{font-family:var(--f)!important;background:#0A141C!important}
 .leaflet-bar a{background:var(--panel-2)!important;color:var(--texto)!important;border-color:var(--linea)!important}
 .leaflet-control-attribution{background:rgba(12,24,34,.75)!important;color:var(--tenue)!important;font-size:10px!important}
@@ -176,6 +176,13 @@ button,select{font:inherit;color:inherit}
 .mapa-tit{font-size:13px;color:var(--suave);margin:0 0 8px}
 .marca-spot{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-weight:800;font-stretch:85%;font-size:12.5px;color:#0B1620;border:2px solid rgba(255,255,255,.9);box-shadow:0 2px 10px rgba(0,0,0,.5)}
 .marca-spot.sel{outline:3px solid var(--acento);outline-offset:2px}
+.punto{width:10px;height:10px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.35)}
+.capa-et{position:absolute;inset:0;pointer-events:none;z-index:500}
+.capa-et svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.et{position:absolute;pointer-events:auto;display:flex;align-items:center;gap:6px;height:26px;padding:0 9px 0 3px;border-radius:13px;background:rgba(19,35,47,.94);
+  border:1px solid var(--linea);cursor:pointer;white-space:nowrap;font-size:12px;font-weight:600;color:var(--texto);transform:translateY(-50%)}
+.et b{display:grid;place-items:center;min-width:22px;height:20px;padding:0 4px;border-radius:10px;font-size:12px;font-weight:800;font-stretch:85%;color:#0B1620}
+.et.sel{border-color:var(--acento);box-shadow:0 0 0 1px var(--acento)}
 .spots{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}
 .spots button{width:100%;display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--linea);border-radius:12px;padding:8px 12px;text-align:left;cursor:pointer}
 .spots .bola{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-stretch:85%;color:#0B1620;font-size:13px}
@@ -299,12 +306,12 @@ const LUGARES = [
   { id: 'elquisco', nombre: 'El Quisco', lat: -33.400, lng: -71.700 },
   { id: 'cartagena', nombre: 'Cartagena', lat: -33.550, lng: -71.610 },
   { id: 'sanantonio', nombre: 'San Antonio', lat: -33.590, lng: -71.630 },
-  { id: 'santodomingo', nombre: 'Rocas de Santo Domingo', lat: -33.640, lng: -71.640 }
+  { id: 'santodomingo', nombre: 'Rocas de Santo Domingo', corto: 'Sto. Domingo', lat: -33.640, lng: -71.640 }
 ];
 const MODOS = {
-  orilla: { nombre: 'orilla', viento: [15, 35], ola: { plano: .3, lo: .6, hi: 1.8, malo: 2.8 }, peligro: { ola: 3.2, viento: 45 } },
-  roca:   { nombre: 'roca',   viento: [15, 30], ola: { plano: .2, lo: .4, hi: 1.4, malo: 2.3 }, peligro: { ola: 2.3, viento: 40 } },
-  bote:   { nombre: 'bote',   viento: [10, 25], ola: { plano: 0,  lo: 0,  hi: .9,  malo: 1.8 }, peligro: { ola: 1.8, viento: 28 } }
+  orilla: { nombre: 'orilla', viento: [10, 30], ola: { plano: .3, lo: .5, hi: 1.5, malo: 2.5 }, peligro: { ola: 3.2, viento: 45 } },
+  roca:   { nombre: 'roca',   viento: [10, 25], ola: { plano: .2, lo: .4, hi: 1.2, malo: 2.0 }, peligro: { ola: 2.3, viento: 40 } },
+  bote:   { nombre: 'bote',   viento: [8, 20],  ola: { plano: 0,  lo: 0,  hi: .7,  malo: 1.5 }, peligro: { ola: 1.8, viento: 28 } }
 };
 const ESPECIES = [
   { nombre: 'Corvina', cient: 'Cilus gilberti', modos: ['orilla', 'roca'], meses: [10,11,12,1,2,3,4], mar: 'mov',
@@ -526,7 +533,8 @@ function analizarDia(fecha, ctx = ctxActual()) {
   const top = [...horas].sort((p, q) => q.puntaje - p.puntaje).slice(0, 4);
   const mTop = media(top.map(x => x.puntaje));
   const amanecerMayor = horas.some(x => x.mayor > .3 && x.c.sol >= .99);
-  let pts = estimado ? 30 + 55 * a.factorFase + (amanecerMayor ? 15 : 0) : 100 * (.3 * a.factorFase + .7 * mTop);
+  const mDia = media(horas.slice(6, 21).map(x => x.puntaje));
+  let pts = estimado ? 30 + 55 * a.factorFase + (amanecerMayor ? 15 : 0) : 100 * (.2 * a.factorFase + .8 * (.6 * mTop + .4 * mDia));
   let presion = null;
   const p0 = regEn(ctx, a.t0 + 6 * H), pm = regEn(ctx, a.t0 - 18 * H), p1 = regEn(ctx, a.t0 + 30 * H);
   if (p0 && p0.presion != null) {
@@ -760,23 +768,61 @@ async function renderMapa() {
   try { await cargarLeaflet(); } catch (e) { leafletListo = null; $('#mapa').innerHTML = '<p class="nota" style="padding:16px">El mapa necesita conexión a internet.</p>'; return; }
   const L = window.L;
   if (!mapa) {
-    mapa = L.map('mapa', { zoomControl: false, attributionControl: true });
-    mapa.fitBounds(LUGARES.map(l => [l.lat, l.lng]), { padding: [30, 30] });
+    mapa = L.map('mapa', { zoomControl: false, attributionControl: true, zoomSnap: 0.25 });
+    mapa.fitBounds(LUGARES.map(l => [l.lat, l.lng]), { paddingTopLeft: [170, 24], paddingBottomRight: [24, 24] });
+    mapa.on('move zoom resize', dibujarEtiquetas);
     const esri = 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/';
     L.tileLayer(esri + 'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, attribution: 'Mapa base © Esri' }).addTo(mapa);
     L.tileLayer(esri + 'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16 }).addTo(mapa);
     L.control.zoom({ position: 'bottomright' }).addTo(mapa);
   }
-  setTimeout(() => mapa.invalidateSize(), 50);
+  setTimeout(() => { mapa.invalidateSize(); dibujarEtiquetas(); }, 60);
   if (capa) capa.remove();
   capa = L.layerGroup().addTo(mapa);
   for (const { l, d } of res) {
     const c = color(ESC_PTS, d.pts);
-    const icono = L.divIcon({ className: '', iconSize: [28, 28], iconAnchor: [14, 14], html: `<div class="marca-spot${l.id === S.lugar ? ' sel' : ''}" style="background:${c};color:${oscuro(c) ? '#fff' : '#0B1620'}">${d.pts}</div>` });
-    L.marker([l.lat, l.lng], { icon: icono, title: l.nombre }).addTo(capa)
-      .bindTooltip(`${l.nombre}: ${d.peligro ? 'No salir' : veredicto(d.pts)}`, { direction: 'top', offset: [0, -14] })
-      .on('click', () => elegirLugar(l.id, true));
+    L.marker([l.lat, l.lng], { icon: L.divIcon({ className: '', iconSize: [10, 10], iconAnchor: [5, 5], html: `<div class="punto" style="background:${c}"></div>` }), interactive: false }).addTo(capa);
   }
+  S.resMapa = res;
+  dibujarEtiquetas();
+}
+/* Etiquetas tiradas al mar, con línea hacia cada punto */
+function dibujarEtiquetas() {
+  if (!mapa || !S.resMapa) return;
+  const cont = mapa.getContainer();
+  let capaEt = cont.querySelector('.capa-et');
+  if (!capaEt) {
+    capaEt = document.createElement('div'); capaEt.className = 'capa-et'; cont.appendChild(capaEt);
+    capaEt.addEventListener('click', e => { const b = e.target.closest('[data-lugar]'); if (b) elegirLugar(b.dataset.lugar, true); });
+    L.DomEvent.disableClickPropagation(capaEt);
+  }
+  const W = cont.clientWidth, Hc = cont.clientHeight, ALTO = 30, ANCHO = 128;
+  const items = S.resMapa.map(({ l, d }) => ({ l, d, p: mapa.latLngToContainerPoint([l.lat, l.lng]) }))
+    .filter(o => o.p.y > -40 && o.p.y < Hc + 40 && o.p.x > -40 && o.p.x < W + 40)
+    .sort((a, b) => a.p.y - b.p.y);
+  if (!items.length) { capaEt.innerHTML = ''; return; }
+  // Columna en el mar, a la izquierda del punto más occidental
+  const minX = Math.min(...items.map(o => o.p.x));
+  const xDer = Math.max(ANCHO + 6, minX - 34);
+  // Repartir en vertical sin traslape
+  const min0 = ALTO / 2 + 6, max0 = Hc - ALTO / 2 - 6, n = items.length;
+  let ys = items.map(o => o.p.y);
+  for (let i = 1; i < n; i++) ys[i] = Math.max(ys[i], ys[i - 1] + ALTO);
+  if (n > 1 && (ys[n - 1] > max0 || n * ALTO > (max0 - min0) * .55)) {
+    // Muchos puntos: repartir parejo en toda la altura, conservando el orden norte-sur
+    const paso = Math.min(40, Math.max(ALTO, (max0 - min0) / (n - 1))), total = (n - 1) * paso;
+    const centro = (items[0].p.y + items[n - 1].p.y) / 2;
+    const ini = Math.max(min0, Math.min(centro - total / 2, max0 - total));
+    ys = items.map((_, i) => ini + i * paso);
+  } else if (ys[0] < min0) { const d = min0 - ys[0]; ys = ys.map(v => v + d); }
+  let lineas = '', etiquetas = '';
+  items.forEach((o, i) => {
+    const c = color(ESC_PTS, o.d.pts), y = ys[i], xEt = Math.max(4, xDer - ANCHO);
+    lineas += `<path d="M${xDer} ${y} L${xDer + 10} ${y} L${o.p.x - 5} ${o.p.y}" fill="none" stroke="${c}" stroke-width="1.4" stroke-opacity=".85"/>`;
+    etiquetas += `<button type="button" class="et${o.l.id === S.lugar ? ' sel' : ''}" data-lugar="${o.l.id}" style="right:${W - xDer}px;top:${y}px" aria-label="${o.l.nombre}: ${o.d.pts} de 100">
+      <b style="background:${c};color:${oscuro(c) ? '#fff' : '#0B1620'}">${o.d.pts}</b>${o.l.corto || o.l.nombre}</button>`;
+  });
+  capaEt.innerHTML = `<svg aria-hidden="true">${lineas}</svg>${etiquetas}`;
 }
 
 /* ---------- Render: especies ---------- */
