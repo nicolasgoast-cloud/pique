@@ -762,7 +762,9 @@ async function renderMapa() {
   if (!mapa) {
     mapa = L.map('mapa', { zoomControl: false, attributionControl: true });
     mapa.fitBounds(LUGARES.map(l => [l.lat, l.lng]), { padding: [30, 30] });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 16, subdomains: 'abcd', attribution: '© OpenStreetMap, © CARTO' }).addTo(mapa);
+    const esri = 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+    L.tileLayer(esri + 'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, attribution: 'Mapa base © Esri' }).addTo(mapa);
+    L.tileLayer(esri + 'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16 }).addTo(mapa);
     L.control.zoom({ position: 'bottomright' }).addTo(mapa);
   }
   setTimeout(() => mapa.invalidateSize(), 50);
