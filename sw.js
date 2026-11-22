@@ -1,5 +1,5 @@
 // Pique: guarda la app para usarla sin señal. El pronóstico se guarda aparte, en la propia app.
-const VERSION = 'pique-v7';
+const VERSION = 'pique-v8';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
