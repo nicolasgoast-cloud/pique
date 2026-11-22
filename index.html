@@ -1222,17 +1222,26 @@ function actualizarReloj() {
   const titulo = `Pesca en ${l.nombre} (${MODOS[S.modo].nombre}, índice ${Math.round(x.puntaje * 100)})`;
   const gfmt = dt => `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
   const gurl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(titulo)}&dates=${gfmt(ini)}/${gfmt(fin)}&ctz=America/Santiago&details=${encodeURIComponent('Creado con Pique. ' + location.href.split('#')[0])}&location=${encodeURIComponent(l.lat + ',' + l.lng)}`;
-  $('#reloj-cal').innerHTML = `<button type="button" class="btn prim" data-cal="ics">Avisarme: agregar al calendario</button><a class="btn" href="${gurl}" target="_blank" rel="noopener">Google Calendar</a>`;
+  $('#reloj-cal').innerHTML = `<button type="button" class="btn prim" data-cal="ics">Avisarme: agregar al calendario</button><a class="btn" href="${gurl}" target="_blank" rel="noopener">Google Calendar</a><p class="nota" id="reloj-cal-nota" style="width:100%;margin:4px 0 0">Agrega un evento de 2 horas desde las ${pad(S.hora)}:00, con alarma 1 hora antes.</p>`;
 }
 function descargarICS() {
   const d = relojDia, x = d.horas[S.hora], l = lugarActual(), ini = new Date(x.t), fin = new Date(x.t + 2 * H);
   const f = dt => `${dt.getUTCFullYear()}${pad(dt.getUTCMonth() + 1)}${pad(dt.getUTCDate())}T${pad(dt.getUTCHours())}${pad(dt.getUTCMinutes())}00Z`;
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Pique//ES', 'BEGIN:VEVENT', `UID:${Date.now()}@pique`, `DTSTAMP:${f(new Date())}`, `DTSTART:${f(ini)}`, `DTEND:${f(fin)}`,
-    `SUMMARY:Pesca en ${l.nombre} (índice ${Math.round(x.puntaje * 100)})`, `GEO:${l.lat};${l.lng}`, `LOCATION:${l.lat}\\, ${l.lng}`,
+    `SUMMARY:Pesca en ${l.nombre} (índice ${Math.round(x.puntaje * 100)})`, `GEO:${l.lat};${l.lng}`, `LOCATION:${l.nombre.replace(/,/g, '\\,')}`, `DESCRIPTION:Creado con Pique. Ubicación ${l.lat}\\, ${l.lng}`,
     'BEGIN:VALARM', 'TRIGGER:-PT60M', 'ACTION:DISPLAY', 'DESCRIPTION:Hora buena para pescar', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const nota = $('#reloj-cal-nota');
+  if (ios) {
+    // En iPhone, abrir el evento directamente: Safari muestra "Agregar al calendario"
+    if (nota) nota.textContent = 'Si no se abrió el Calendario con el botón "Agregar", usa el botón Google Calendar o agrégalo a mano. En algunos iPhone esto solo funciona abriendo Pique desde Safari.';
+    window.location.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+    return;
+  }
   const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
   const a = document.createElement('a'); a.href = url; a.download = 'pique-pesca.ics'; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
+  if (nota) nota.textContent = 'Se descargó el evento "pique-pesca.ics". Ábrelo desde las descargas para agregarlo a tu calendario.';
 }
 function horaDesdePunto(ev) {
   const svg = $('#reloj-svg'), b = svg.getBoundingClientRect();
