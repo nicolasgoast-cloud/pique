@@ -169,10 +169,11 @@ button,select{font:inherit;color:inherit}
 #mapa{height:min(58vh,560px);border-radius:16px;overflow:hidden;border:1px solid var(--linea);background:#0A141C}
 .mapa-wrap{position:relative}
 .fondos{position:absolute;top:10px;right:10px;z-index:700;display:flex;background:rgba(19,35,47,.92);border:1px solid var(--linea);border-radius:10px;padding:3px;gap:2px}
-.fondos button{border:0;background:none;color:var(--suave);font-size:12px;font-weight:600;padding:5px 9px;border-radius:7px;cursor:pointer}
+.fondos button{border:0;background:none;color:var(--suave);font-size:12px;font-weight:600;padding:5px 7px;border-radius:7px;cursor:pointer}
 .fondos button[aria-pressed="true"]{background:var(--acento);color:#0B1620}
 #mapa[data-fondo="mar"] .leaflet-tile-pane{filter:saturate(.9)}
 .leaflet-tile-container img{width:256.5px!important;height:256.5px!important}
+.sombra{mix-blend-mode:multiply;opacity:.6}
 .marca-temp{width:22px;height:22px;border-radius:50%;border:3px solid #fff;background:rgba(47,211,166,.55);box-shadow:0 0 0 4px rgba(47,211,166,.35),0 2px 8px rgba(0,0,0,.5)}
 .punto-box{position:absolute;left:8px;right:8px;bottom:8px;z-index:1100;background:rgba(19,35,47,.97);border:1px solid var(--linea);border-radius:14px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.45);max-height:calc(100% - 60px);overflow:auto}
 .punto-box[hidden]{display:none}
@@ -863,9 +864,9 @@ async function renderMapa() {
     mapa.on('move zoom resize', dibujarEtiquetas);
     mapa.on('click', e => marcarPunto(e.latlng));
     L.control.zoom({ position: 'bottomright' }).addTo(mapa);
-    ponerFondo(store.get('fondo', 'mar'));
+    ponerFondo(store.get('fondo', 'relieve'));
     const ctrl = document.createElement('div'); ctrl.className = 'fondos'; ctrl.setAttribute('role', 'group'); ctrl.setAttribute('aria-label', 'Fondo del mapa');
-    ctrl.innerHTML = [['mar', 'Mar'], ['satelite', 'Satélite'], ['oscuro', 'Oscuro']].map(([k, t]) => `<button type="button" data-fondo="${k}">${t}</button>`).join('');
+    ctrl.innerHTML = [['relieve', 'Relieve'], ['mar', 'Mar'], ['satelite', 'Satélite'], ['oscuro', 'Oscuro']].map(([k, t]) => `<button type="button" data-fondo="${k}">${t}</button>`).join('');
     mapa.getContainer().appendChild(ctrl); L.DomEvent.disableClickPropagation(ctrl);
     ctrl.addEventListener('click', e => { const b = e.target.closest('[data-fondo]'); if (b) ponerFondo(b.dataset.fondo); });
     marcarBotonesFondo();
@@ -889,20 +890,21 @@ async function renderMapa() {
 /* Fondos del mapa (Esri) */
 let capaFondo = null;
 const FONDOS = {
+  relieve: [['World_Imagery', 19], ['Elevation/World_Hillshade', 16, 'sombra'], ['Reference/World_Boundaries_and_Places', 19]],
   mar: [['Ocean/World_Ocean_Base', 13], ['Ocean/World_Ocean_Reference', 13]],
   satelite: [['World_Imagery', 19], ['Reference/World_Boundaries_and_Places', 19]],
   oscuro: [['Canvas/World_Dark_Gray_Base', 16], ['Canvas/World_Dark_Gray_Reference', 16]]
 };
 function ponerFondo(k) {
-  if (!FONDOS[k]) k = 'mar';
+  if (!FONDOS[k]) k = 'relieve';
   store.set('fondo', k);
   if (capaFondo) capaFondo.remove();
-  capaFondo = L.layerGroup(FONDOS[k].map(([ruta, nat], i) => L.tileLayer(`https://services.arcgisonline.com/ArcGIS/rest/services/${ruta}/MapServer/tile/{z}/{y}/{x}`, { maxNativeZoom: nat, maxZoom: 18, attribution: i ? '' : 'Mapa base © Esri' }))).addTo(mapa);
+  capaFondo = L.layerGroup(FONDOS[k].map(([ruta, nat, clase], i) => L.tileLayer(`https://services.arcgisonline.com/ArcGIS/rest/services/${ruta}/MapServer/tile/{z}/{y}/{x}`, { maxNativeZoom: nat, maxZoom: 18, className: clase || '', attribution: i ? '' : 'Mapa base © Esri, Maxar, Earthstar Geographics' }))).addTo(mapa);
   capaFondo.eachLayer(l => l.bringToBack());
   mapa.getContainer().dataset.fondo = k;
   marcarBotonesFondo();
 }
-function marcarBotonesFondo() { const k = store.get('fondo', 'mar'); document.querySelectorAll('.fondos [data-fondo]').forEach(b => b.setAttribute('aria-pressed', b.dataset.fondo === k)); }
+function marcarBotonesFondo() { const k = store.get('fondo', 'relieve'); document.querySelectorAll('.fondos [data-fondo]').forEach(b => b.setAttribute('aria-pressed', b.dataset.fondo === k)); }
 
 /* Tocar el mapa: condiciones del punto exacto */
 let marcaTemp = null, puntoVista = null;
